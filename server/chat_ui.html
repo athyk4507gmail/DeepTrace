@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DeepTrace — Autonomous Deep Research Agent</title>
+    <meta name="description" content="DeepTrace: AI-powered deep research agent that scrapes, aggregates, and synthesizes cited reports from live web sources.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+        :root{
+            --bg:#06080f;--bg-card:#0d1120;--bg-card-hover:#111730;
+            --border:#1a2040;--border-glow:rgba(130,170,255,0.12);
+            --accent:#7eb4ff;--accent-dim:rgba(126,180,255,0.15);
+            --accent-glow:rgba(126,180,255,0.25);
+            --text:#e8ecf4;--text-dim:#8094b0;--text-muted:#4a5c78;
+            --green:#34d399;--green-dim:rgba(52,211,153,0.12);
+            --red:#f87171;--purple:#a78bfa;
+            --gradient:linear-gradient(135deg,#7eb4ff 0%,#a78bfa 50%,#34d399 100%);
+            --radius:14px;--radius-sm:10px;
+        }
+        html,body{height:100%;overflow:hidden}
+        body{
+            font-family:'Inter',system-ui,sans-serif;
+            background:var(--bg);color:var(--text);
+            display:flex;flex-direction:column;
+        }
+
+        /* ─── Animated BG ─── */
+        body::before{
+            content:'';position:fixed;inset:0;z-index:0;pointer-events:none;
+            background:
+                radial-gradient(ellipse 80% 60% at 20% 10%,rgba(126,180,255,0.06),transparent),
+                radial-gradient(ellipse 60% 50% at 80% 90%,rgba(167,139,250,0.05),transparent),
+                radial-gradient(ellipse 50% 40% at 50% 50%,rgba(52,211,153,0.03),transparent);
+        }
+
+        /* ─── Header ─── */
+        header{
+            position:relative;z-index:1;
+            padding:1.5rem 2rem;text-align:center;
+            border-bottom:1px solid var(--border);
+            background:linear-gradient(180deg,rgba(13,17,32,0.95),rgba(6,8,15,0.98));
+            backdrop-filter:blur(20px);
+        }
+        .logo{display:inline-flex;align-items:center;gap:0.75rem}
+        .logo-icon{
+            width:40px;height:40px;border-radius:12px;
+            background:var(--gradient);
+            display:flex;align-items:center;justify-content:center;
+            font-size:1.2rem;font-weight:800;color:#06080f;
+            box-shadow:0 0 24px rgba(126,180,255,0.25);
+        }
+        h1{
+            font-size:1.75rem;font-weight:800;letter-spacing:-0.03em;
+            background:var(--gradient);-webkit-background-clip:text;
+            -webkit-text-fill-color:transparent;background-clip:text;
+        }
+        .subtitle{
+            margin-top:0.35rem;font-size:0.72rem;font-weight:500;
+            text-transform:uppercase;letter-spacing:0.25em;color:var(--text-muted);
+        }
+
+        /* ─── Session Badge ─── */
+        .session-badge{
+            position:fixed;top:1rem;right:1rem;z-index:10;
+            font-family:'JetBrains Mono',monospace;font-size:0.65rem;
+            color:var(--text-muted);background:var(--bg-card);
+            border:1px solid var(--border);border-radius:20px;
+            padding:0.3rem 0.75rem;backdrop-filter:blur(10px);
+        }
+
+        /* ─── Chat Area ─── */
+        #chat-area{
+            flex:1;overflow-y:auto;padding:2rem 1rem;
+            display:flex;flex-direction:column;gap:1.25rem;
+            max-width:860px;margin:0 auto;width:100%;
+            position:relative;z-index:1;
+            scrollbar-width:thin;scrollbar-color:var(--border) transparent;
+        }
+        #chat-area::-webkit-scrollbar{width:5px}
+        #chat-area::-webkit-scrollbar-track{background:transparent}
+        #chat-area::-webkit-scrollbar-thumb{background:var(--border);border-radius:10px}
+
+        /* ─── Messages ─── */
+        .msg{
+            padding:1.25rem 1.5rem;border-radius:var(--radius);
+            max-width:88%;line-height:1.65;font-size:0.92rem;
+            animation:msgIn 0.35s cubic-bezier(0.16,1,0.3,1);
+        }
+        @keyframes msgIn{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+        .msg-user{
+            align-self:flex-end;
+            background:linear-gradient(135deg,rgba(126,180,255,0.18),rgba(167,139,250,0.12));
+            border:1px solid rgba(126,180,255,0.2);color:var(--text);font-weight:500;
+        }
+        .msg-agent{
+            align-self:flex-start;
+            background:var(--bg-card);border:1px solid var(--border);
+        }
+
+        /* ─── Welcome ─── */
+        .welcome{text-align:center;padding:3rem 1rem;align-self:center}
+        .welcome-icon{
+            width:64px;height:64px;margin:0 auto 1.25rem;border-radius:18px;
+            background:var(--gradient);display:flex;align-items:center;justify-content:center;
+            font-size:1.6rem;box-shadow:0 0 40px rgba(126,180,255,0.2);
+        }
+        .welcome h2{font-size:1.3rem;font-weight:700;margin-bottom:0.5rem}
+        .welcome p{color:var(--text-dim);font-size:0.88rem;max-width:420px;margin:0 auto}
+        .suggestions{display:flex;flex-wrap:wrap;gap:0.5rem;justify-content:center;margin-top:1.25rem}
+        .suggestion{
+            font-size:0.78rem;padding:0.5rem 1rem;border-radius:20px;
+            background:var(--accent-dim);border:1px solid rgba(126,180,255,0.15);
+            color:var(--accent);cursor:pointer;transition:all 0.2s;
+        }
+        .suggestion:hover{background:rgba(126,180,255,0.22);border-color:var(--accent);transform:translateY(-1px)}
+
+        /* ─── Status ─── */
+        .status{
+            display:flex;align-items:center;gap:0.6rem;
+            font-size:0.82rem;color:var(--text-dim);padding:0.4rem 0;
+        }
+        .pulse{
+            width:8px;height:8px;border-radius:50%;background:var(--accent);
+            animation:pulse 1.5s ease-in-out infinite;
+        }
+        @keyframes pulse{0%,100%{opacity:1;box-shadow:0 0 0 0 var(--accent-glow)}50%{opacity:0.6;box-shadow:0 0 0 8px transparent}}
+
+        /* ─── Report ─── */
+        .report{display:flex;flex-direction:column;gap:1.25rem}
+        .report-header{display:flex;align-items:center;gap:0.75rem;flex-wrap:wrap}
+        .report-header h3{font-size:1rem;font-weight:700;flex:1}
+        .badge{
+            font-family:'JetBrains Mono',monospace;font-size:0.7rem;font-weight:600;
+            padding:0.3rem 0.7rem;border-radius:20px;
+        }
+        .badge-conf{background:var(--green-dim);color:var(--green)}
+        .badge-src{background:var(--accent-dim);color:var(--accent)}
+
+        .summary-box{
+            background:linear-gradient(135deg,rgba(126,180,255,0.07),rgba(167,139,250,0.05));
+            border-left:3px solid var(--accent);border-radius:var(--radius-sm);
+            padding:1.15rem 1.25rem;font-size:0.9rem;line-height:1.7;color:var(--text);
+        }
+
+        .findings{list-style:none;counter-reset:f}
+        .findings li{
+            counter-increment:f;position:relative;
+            padding:0.6rem 0 0.6rem 2.2rem;
+            border-bottom:1px solid rgba(26,32,64,0.5);
+            font-size:0.88rem;line-height:1.6;
+        }
+        .findings li:last-child{border-bottom:none}
+        .findings li::before{
+            content:counter(f);position:absolute;left:0;top:0.6rem;
+            width:1.5rem;height:1.5rem;border-radius:6px;
+            background:var(--accent-dim);color:var(--accent);
+            font-size:0.7rem;font-weight:700;
+            display:flex;align-items:center;justify-content:center;
+        }
+
+        .sources-grid{display:grid;gap:0.75rem}
+        .src-card{
+            display:block;text-decoration:none;color:inherit;
+            padding:1rem 1.15rem;border-radius:var(--radius-sm);
+            background:rgba(255,255,255,0.02);border:1px solid var(--border);
+            transition:all 0.25s;
+        }
+        .src-card:hover{
+            background:var(--bg-card-hover);border-color:rgba(126,180,255,0.2);
+            transform:translateY(-2px);box-shadow:0 8px 24px rgba(0,0,0,0.3);
+        }
+        .src-title{
+            color:var(--green);font-weight:600;font-size:0.85rem;
+            display:flex;align-items:center;gap:0.4rem;margin-bottom:0.35rem;
+        }
+        .src-title::before{content:'↗';font-size:0.7rem;opacity:0.6}
+        .src-snippet{font-size:0.8rem;color:var(--text-dim);line-height:1.55;
+            display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+        .section-label{font-size:0.72rem;text-transform:uppercase;letter-spacing:0.15em;
+            color:var(--text-muted);font-weight:600;margin-bottom:0.5rem}
+
+        /* ─── Footer ─── */
+        footer{
+            position:relative;z-index:1;
+            padding:1rem 1.5rem 1.25rem;
+            border-top:1px solid var(--border);
+            background:linear-gradient(180deg,rgba(13,17,32,0.96),rgba(6,8,15,0.99));
+            backdrop-filter:blur(20px);
+        }
+        .footer-inner{max-width:860px;margin:0 auto}
+        .controls{
+            display:flex;align-items:center;gap:1.25rem;
+            margin-bottom:0.75rem;flex-wrap:wrap;
+        }
+        .control-group{display:flex;align-items:center;gap:0.5rem;font-size:0.78rem;color:var(--text-dim)}
+        .control-group label{font-weight:500}
+        .control-group span{
+            font-family:'JetBrains Mono',monospace;font-weight:600;
+            color:var(--accent);min-width:1.2em;text-align:center;
+        }
+        input[type=range]{
+            -webkit-appearance:none;height:4px;border-radius:4px;
+            background:var(--border);outline:none;cursor:pointer;width:100px;
+        }
+        input[type=range]::-webkit-slider-thumb{
+            -webkit-appearance:none;width:16px;height:16px;border-radius:50%;
+            background:var(--accent);border:2px solid var(--bg);cursor:pointer;
+            box-shadow:0 0 8px var(--accent-glow);
+        }
+        .btn-new{
+            background:transparent;border:1px solid var(--border);color:var(--text-dim);
+            padding:0.4rem 0.9rem;border-radius:8px;font-size:0.75rem;font-weight:600;
+            cursor:pointer;transition:all 0.2s;margin-left:auto;
+        }
+        .btn-new:hover{border-color:var(--accent);color:var(--accent)}
+        .input-row{display:flex;gap:0.75rem;align-items:center}
+        #query-input{
+            flex:1;background:var(--bg-card);border:1px solid var(--border);
+            padding:0.85rem 1.25rem;border-radius:var(--radius);
+            color:var(--text);font-size:0.92rem;font-family:'Inter',sans-serif;
+            outline:none;transition:border-color 0.25s,box-shadow 0.25s;
+        }
+        #query-input:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-dim)}
+        #query-input::placeholder{color:var(--text-muted)}
+        #submit-btn{
+            height:46px;padding:0 1.75rem;border:none;border-radius:var(--radius);
+            font-weight:700;font-size:0.88rem;cursor:pointer;
+            background:var(--gradient);color:#06080f;
+            transition:all 0.25s;position:relative;overflow:hidden;
+        }
+        #submit-btn:hover{transform:translateY(-1px);box-shadow:0 4px 20px var(--accent-glow)}
+        #submit-btn:disabled{opacity:0.4;cursor:not-allowed;transform:none;box-shadow:none}
+        #submit-btn::after{
+            content:'';position:absolute;inset:0;
+            background:linear-gradient(90deg,transparent,rgba(255,255,255,0.15),transparent);
+            transform:translateX(-100%);transition:transform 0.5s;
+        }
+        #submit-btn:not(:disabled):hover::after{transform:translateX(100%)}
+    </style>
+</head>
+<body>
+    <div class="session-badge" id="session-display">SESSION: —</div>
+    <header>
+        <div class="logo">
+            <div class="logo-icon">D</div>
+            <div>
+                <h1>DeepTrace</h1>
+                <div class="subtitle">Autonomous Deep Research Agent</div>
+            </div>
+        </div>
+    </header>
+
+    <div id="chat-area">
+        <div class="welcome" id="welcome-screen">
+            <div class="welcome-icon">&#x1F50D;</div>
+            <h2>What would you like to research?</h2>
+            <p>I scrape live web sources, score relevance with AI, and synthesize cited research reports in real-time.</p>
+            <div class="suggestions">
+                <div class="suggestion" onclick="useSuggestion(this)">AI safety regulations EU 2025</div>
+                <div class="suggestion" onclick="useSuggestion(this)">Top open-source LLMs and benchmarks</div>
+                <div class="suggestion" onclick="useSuggestion(this)">Quantum computing breakthroughs 2025</div>
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        <div class="footer-inner">
+            <div class="controls">
+                <div class="control-group">
+                    <label>Sources:</label>
+                    <input type="range" id="max-sources" min="3" max="10" value="5"
+                           oninput="document.getElementById('src-val').textContent=this.value">
+                    <span id="src-val">5</span>
+                </div>
+                <button class="btn-new" onclick="resetChat()">&#x21BB; New Research</button>
+            </div>
+            <div class="input-row">
+                <input type="text" id="query-input" placeholder="Enter your research query..."
+                       onkeydown="if(event.key==='Enter')startResearch()">
+                <button id="submit-btn" onclick="startResearch()">Research</button>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        let sessionId=localStorage.getItem('dt_session')||'dt-'+crypto.randomUUID().slice(0,8);
+        localStorage.setItem('dt_session',sessionId);
+        document.getElementById('session-display').textContent='SESSION: '+sessionId;
+
+        function useSuggestion(el){
+            document.getElementById('query-input').value=el.textContent;
+            startResearch();
+        }
+
+        function addMsg(role,content,isHtml=false){
+            const w=document.getElementById('welcome-screen');
+            if(w)w.remove();
+            const area=document.getElementById('chat-area');
+            const d=document.createElement('div');
+            d.className='msg msg-'+role;
+            if(isHtml)d.innerHTML=content;else d.textContent=content;
+            area.appendChild(d);
+            area.scrollTop=area.scrollHeight;
+            return d;
+        }
+
+        function resetChat(){
+            const area=document.getElementById('chat-area');
+            area.innerHTML=`<div class="welcome" id="welcome-screen">
+                <div class="welcome-icon">&#x1F50D;</div>
+                <h2>What would you like to research?</h2>
+                <p>I scrape live web sources, score relevance with AI, and synthesize cited research reports in real-time.</p>
+                <div class="suggestions">
+                    <div class="suggestion" onclick="useSuggestion(this)">AI safety regulations EU 2025</div>
+                    <div class="suggestion" onclick="useSuggestion(this)">Top open-source LLMs and benchmarks</div>
+                    <div class="suggestion" onclick="useSuggestion(this)">Quantum computing breakthroughs 2025</div>
+                </div>
+            </div>`;
+            document.getElementById('query-input').value='';
+        }
+
+        async function startResearch(){
+            const input=document.getElementById('query-input');
+            const query=input.value.trim();
+            if(!query)return;
+            const maxSrc=document.getElementById('max-sources').value;
+            const btn=document.getElementById('submit-btn');
+            input.value='';input.disabled=true;btn.disabled=true;
+            addMsg('user',query);
+            const agent=addMsg('agent','');
+            agent.innerHTML='<div id="st-container"></div><div id="rpt-container"></div>';
+            const stC=agent.querySelector('#st-container');
+            const rptC=agent.querySelector('#rpt-container');
+
+            const es=new EventSource(`/research/stream?query=${encodeURIComponent(query)}&max_sources=${maxSrc}`);
+            es.onmessage=e=>{
+                const d=JSON.parse(e.data);
+                if(d.status==='done'){
+                    es.close();stC.innerHTML='';
+                    renderReport(rptC,d.report);
+                    input.disabled=false;btn.disabled=false;
+                }else if(d.status==='error'){
+                    es.close();
+                    stC.innerHTML=`<div class="status" style="color:var(--red)">✕ ${d.message}</div>`;
+                    input.disabled=false;btn.disabled=false;
+                }else{
+                    stC.innerHTML=`<div class="status"><div class="pulse"></div>${d.message}</div>`;
+                }
+                document.getElementById('chat-area').scrollTop=9e9;
+            };
+            es.onerror=()=>{
+                es.close();
+                stC.innerHTML='<div class="status" style="color:var(--red)">✕ Connection lost</div>';
+                input.disabled=false;btn.disabled=false;
+            };
+        }
+
+        function renderReport(el,r){
+            el.innerHTML=`<div class="report">
+                <div class="report-header">
+                    <h3>Research Report</h3>
+                    <span class="badge badge-conf">Confidence ${(r.confidence_score*100).toFixed(0)}%</span>
+                    <span class="badge badge-src">${r.sources_scraped} sources</span>
+                </div>
+                <div class="summary-box">${esc(r.summary)}</div>
+                <div>
+                    <div class="section-label">Key Findings</div>
+                    <ol class="findings">${r.key_findings.map(f=>`<li>${esc(f)}</li>`).join('')}</ol>
+                </div>
+                <div>
+                    <div class="section-label">Sources</div>
+                    <div class="sources-grid">${r.citations.map(c=>`
+                        <a href="${esc(c.url)}" target="_blank" rel="noopener" class="src-card">
+                            <div class="src-title">[${c.index}] ${esc(c.title)}</div>
+                            <div class="src-snippet">${esc(c.snippet)}</div>
+                        </a>`).join('')}
+                    </div>
+                </div>
+            </div>`;
+        }
+
+        function esc(s){const d=document.createElement('div');d.textContent=s||'';return d.innerHTML}
+    </script>
+</body>
+</html>

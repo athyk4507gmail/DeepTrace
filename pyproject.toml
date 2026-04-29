@@ -1,0 +1,28 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "rcaagent-env"
+version = "2.0.0"
+description = "OpenEnv-compatible simulation environment for SRE root-cause analysis tasks."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+authors = [
+  { name = "Sujalk123" }
+]
+dependencies = [
+  "fastapi>=0.111",
+  "uvicorn[standard]>=0.30",
+  "pydantic>=2.7",
+  "python-dotenv>=1.0",
+  "openenv>=0.1.0",
+  "openenv-core>=0.1.0"
+]
+
+[project.scripts]
+server = "server.app:main"
+
+[tool.setuptools]
+include-package-data = true

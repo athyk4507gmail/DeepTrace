@@ -1,0 +1,60 @@
+name: "RCAAgent-Env"
+version: "2.0.0"
+description: "OpenEnv-compatible microservice incident root cause analysis simulation environment."
+entry_point: "server.app:app"
+reward_range: [0.0, 1.0]
+
+tasks:
+  - name: "Single Service Failure"
+    difficulty: "easy"
+    description: "Investigate a cache/database driven checkout degradation with clear blast radius."
+  - name: "Config Cascade"
+    difficulty: "medium"
+    description: "Investigate cascading failures caused by cache misconfiguration and pricing dependency impact."
+  - name: "Diffuse Network Degradation"
+    difficulty: "hard"
+    description: "Investigate broad cross-service latency/error symptoms where network packet loss is the root cause."
+  - name: "DDoS Attack"
+    difficulty: "ddos"
+    description: "Investigate volumetric attack symptoms at the API gateway and dependent services."
+  - name: "Data Breach"
+    difficulty: "data_breach"
+    description: "Investigate credential compromise and anomalous exfiltration behavior."
+
+action_space:
+  type: "structured_json"
+  fields:
+    - action_type
+    - target_service
+    - hypothesis
+    - rca_report
+  allowed_actions:
+    - query_metrics
+    - query_logs
+    - pull_traces
+    - query_dependencies
+    - form_hypothesis
+    - submit_rca
+
+observation_space:
+  type: "structured_json"
+  fields:
+    - success
+    - message
+    - data
+    - anomaly_detected
+    - anomaly_type
+    - queries_remaining
+    - reward
+
+server:
+  module: "server.app:app"
+  framework: "uvicorn"
+  port: 7860
+  health_check: "/tasks"
+
+endpoints:
+  tasks: "GET /tasks"
+  reset: "POST /openenv/reset"
+  step: "POST /openenv/step"
+  validate: "POST /openenv/validate"
