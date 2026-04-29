@@ -11,7 +11,7 @@ import json
 import time
 import asyncio
 from fastapi import FastAPI, HTTPException, Query as QueryParam
-from fastapi.responses import HTMLResponse, StreamingResponse, PlainTextResponse
+from fastapi.responses import HTMLResponse, StreamingResponse, PlainTextResponse, Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from models import ResearchQuery, ResearchReport
@@ -217,7 +217,7 @@ async def stream_research(
 
 @app.get("/research/export")
 async def export_research(session_id: str, format: str = "markdown"):
-    """Export last report for a session as markdown."""
+    """Export last report for a session in various formats."""
     history = await get_session_history(session_id)
     if not history:
         raise HTTPException(status_code=404, detail="No reports found for this session.")
@@ -237,10 +237,150 @@ async def export_research(session_id: str, format: str = "markdown"):
     )
     
     md = format_report_markdown(report)
+    
     if format == "markdown":
         return PlainTextResponse(md, media_type="text/markdown",
                                 headers={"Content-Disposition": f"attachment; filename=deeptrace-report-{session_id[:8]}.md"})
+    elif format == "pdf":
+        # Convert markdown to PDF
+        try:
+            import weasyprint
+            html_content = f"""
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <meta charset="UTF-8">
+                <style>
+                    body {{ font-family: Arial, sans-serif; line-height: 1.6; margin: 40px; }}
+                    h1 {{ color: #333; border-bottom: 2px solid #00ff88; padding-bottom: 10px; }}
+                    h2 {{ color: #555; margin-top: 30px; }}
+                    .finding {{ background: #f5f5f5; padding: 15px; margin: 10px 0; border-left: 4px solid #00ff88; }}
+                    .citation {{ font-size: 0.9em; color: #666; }}
+                </style>
+            </head>
+            <body>
+                {md.replace('\n', '<br>')}
+            </body>
+            </html>
+            """
+            pdf = weasyprint.HTML(string=html_content).write_pdf()
+            return Response(
+                content=pdf,
+                media_type="application/pdf",
+                headers={"Content-Disposition": f"attachment; filename=deeptrace-report-{session_id[:8]}.pdf"}
+            )
+        except ImportError:
+            # Fallback if weasyprint not available
+            return PlainTextResponse(md, media_type="text/markdown",
+                                    headers={"Content-Disposition": f"attachment; filename=deeptrace-report-{session_id[:8]}.md"})
+    elif format == "ppt":
+        # Create PPT-like content (simplified HTML that can be opened as PPT)
+        html_content = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="UTF-8">
+            <title>DeepTrace Report - {report.query[:50]}</title>
+            <style>
+                body {{ font-family: Arial, sans-serif; margin: 0; padding: 20px; }}
+                .slide {{ page-break-after: always; min-height: 90vh; border: 1px solid #ddd; padding: 40px; margin-bottom: 20px; }}
+                .title {{ font-size: 24px; font-weight: bold; color: #00ff88; margin-bottom: 20px; }}
+                .content {{ font-size: 18px; line-height: 1.6; }}
+                .finding {{ background: #f9f9f9; padding: 20px; margin: 15px 0; border-left: 4px solid #00ff88; }}
+            </style>
+        </head>
+        <body>
+            <div class="slide">
+                <div class="title">DeepTrace Research Report</div>
+                <div class="content">
+                    <h2>Query: {report.query}</h2>
+                    <p><strong>Confidence Score:</strong> {report.confidence_score}/10</p>
+                    <p><strong>Sources Analyzed:</strong> {report.sources_scraped}</p>
+                </div>
+            </div>
+            <div class="slide">
+                <div class="title">Key Findings</div>
+                <div class="content">
+        """
+        
+        for i, finding in enumerate(report.key_findings, 1):
+            html_content += f'<div class="finding"><strong>{i}.</strong> {finding}</div>'
+        
+        html_content += """
+                </div>
+            </div>
+            <div class="slide">
+                <div class="title">Summary</div>
+                <div class="content">""" + report.summary + """</div>
+            </div>
+        </body>
+        </html>
+        """
+        return Response(
+            content=html_content.encode('utf-8'),
+            media_type="text/html",
+            headers={"Content-Disposition": f"attachment; filename=deeptrace-report-{session_id[:8]}.ppt.html"}
+        )
+    
     return PlainTextResponse(md)
+
+@app.get("/research/share/{session_id}")
+async def share_research(session_id: str):
+    """Generate shareable link for a research session."""
+    # Create a shareable URL that points to a public view of the research
+    share_url = f"{os.getenv('BASE_URL', 'http://localhost:8000')}/shared/{session_id}"
+    return {"share_url": share_url, "session_id": session_id}
+
+@app.get("/shared/{session_id}")
+async def view_shared_research(session_id: str):
+    """Public view of a shared research session."""
+    history = await get_session_history(session_id)
+    if not history:
+        raise HTTPException(status_code=404, detail="Research session not found.")
+    
+    last_report_data = history[-1]
+    # Reconstruct report object
+    from models import Citation
+    citations = [Citation(**c) for c in last_report_data.get("citations", [])]
+    report = ResearchReport(
+        query=last_report_data.get("query", ""),
+        summary=last_report_data.get("summary", ""),
+        key_findings=last_report_data.get("key_findings", []),
+        citations=citations,
+        sources_scraped=last_report_data.get("sources_scraped", 0),
+        confidence_score=last_report_data.get("confidence_score", 0),
+        session_id=session_id
+    )
+    
+    # Generate HTML for shared view
+    md = format_report_markdown(report)
+    html_content = f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset="UTF-8">
+        <title>DeepTrace Research - {report.query[:50]}</title>
+        <style>
+            body {{ font-family: Arial, sans-serif; line-height: 1.6; margin: 40px; max-width: 800px; }}
+            h1 {{ color: #333; border-bottom: 2px solid #00ff88; padding-bottom: 10px; }}
+            h2 {{ color: #555; margin-top: 30px; }}
+            .finding {{ background: #f5f5f5; padding: 15px; margin: 10px 0; border-left: 4px solid #00ff88; }}
+            .citation {{ font-size: 0.9em; color: #666; }}
+            .header {{ background: #00ff88; color: #000; padding: 20px; margin: -40px -40px 20px -40px; }}
+        </style>
+    </head>
+    <body>
+        <div class="header">
+            <h1>🤖 DeepTrace Research Report</h1>
+            <p><strong>Query:</strong> {report.query}</p>
+            <p><strong>Confidence Score:</strong> {report.confidence_score}/10</p>
+            <p><strong>Sources Analyzed:</strong> {report.sources_scraped}</p>
+        </div>
+        {md.replace('\n', '<br>')}
+    </body>
+    </html>
+    """
+    return HTMLResponse(content=html_content)
 
 @app.get("/sessions")
 async def list_sessions():
