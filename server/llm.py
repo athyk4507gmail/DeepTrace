@@ -1,12 +1,12 @@
 import os
-from groq import Groq
+from cerebras.cloud.sdk import Cerebras
 
-client = Groq(api_key=os.getenv("GROQ_API_KEY"))
+client = Cerebras(api_key=os.getenv("CEREBRAS_API_KEY"))
 
 async def call_gemini(
     prompt: str,
     system_prompt: str = None,
-    model_name: str = "llama-3.3-70b-versatile",
+    model_name: str = "llama3.1-8b",
     max_tokens: int = 2048
 ) -> str:
     messages = []
@@ -15,7 +15,7 @@ async def call_gemini(
     messages.append({"role": "user", "content": prompt})
 
     response = client.chat.completions.create(
-        model="llama-3.3-70b-versatile",
+        model="llama3.1-8b",
         messages=messages,
         max_tokens=max_tokens
     )
@@ -26,5 +26,14 @@ async def call_gemini_json(
     system_prompt: str = None,
 ) -> str:
     json_system = (system_prompt or "") + \
-        "\n\nIMPORTANT: Respond ONLY with valid JSON. No markdown, \n         no backticks, no explanation."
-    return await call_gemini(prompt, json_system)
+        "\n\nIMPORTANT: Respond ONLY with valid JSON. No markdown, no backticks, no explanation."
+    response = await call_gemini(prompt, json_system, max_tokens=3000)
+    # Clean markdown if present
+    response = response.strip()
+    if response.startswith("```json"):
+        response = response[7:]
+    elif response.startswith("```"):
+        response = response[3:]
+    if response.endswith("```"):
+        response = response[:-3]
+    return response.strip()

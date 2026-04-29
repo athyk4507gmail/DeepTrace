@@ -1,389 +1,305 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DeepTrace — Autonomous Deep Research Agent</title>
-    <meta name="description" content="DeepTrace: AI-powered deep research agent that scrapes, aggregates, and synthesizes cited reports from live web sources.">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-    <style>
-        *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-        :root{
-            --bg:#06080f;--bg-card:#0d1120;--bg-card-hover:#111730;
-            --border:#1a2040;--border-glow:rgba(130,170,255,0.12);
-            --accent:#7eb4ff;--accent-dim:rgba(126,180,255,0.15);
-            --accent-glow:rgba(126,180,255,0.25);
-            --text:#e8ecf4;--text-dim:#8094b0;--text-muted:#4a5c78;
-            --green:#34d399;--green-dim:rgba(52,211,153,0.12);
-            --red:#f87171;--purple:#a78bfa;
-            --gradient:linear-gradient(135deg,#7eb4ff 0%,#a78bfa 50%,#34d399 100%);
-            --radius:14px;--radius-sm:10px;
-        }
-        html,body{height:100%;overflow:hidden}
-        body{
-            font-family:'Inter',system-ui,sans-serif;
-            background:var(--bg);color:var(--text);
-            display:flex;flex-direction:column;
-        }
-
-        /* ─── Animated BG ─── */
-        body::before{
-            content:'';position:fixed;inset:0;z-index:0;pointer-events:none;
-            background:
-                radial-gradient(ellipse 80% 60% at 20% 10%,rgba(126,180,255,0.06),transparent),
-                radial-gradient(ellipse 60% 50% at 80% 90%,rgba(167,139,250,0.05),transparent),
-                radial-gradient(ellipse 50% 40% at 50% 50%,rgba(52,211,153,0.03),transparent);
-        }
-
-        /* ─── Header ─── */
-        header{
-            position:relative;z-index:1;
-            padding:1.5rem 2rem;text-align:center;
-            border-bottom:1px solid var(--border);
-            background:linear-gradient(180deg,rgba(13,17,32,0.95),rgba(6,8,15,0.98));
-            backdrop-filter:blur(20px);
-        }
-        .logo{display:inline-flex;align-items:center;gap:0.75rem}
-        .logo-icon{
-            width:40px;height:40px;border-radius:12px;
-            background:var(--gradient);
-            display:flex;align-items:center;justify-content:center;
-            font-size:1.2rem;font-weight:800;color:#06080f;
-            box-shadow:0 0 24px rgba(126,180,255,0.25);
-        }
-        h1{
-            font-size:1.75rem;font-weight:800;letter-spacing:-0.03em;
-            background:var(--gradient);-webkit-background-clip:text;
-            -webkit-text-fill-color:transparent;background-clip:text;
-        }
-        .subtitle{
-            margin-top:0.35rem;font-size:0.72rem;font-weight:500;
-            text-transform:uppercase;letter-spacing:0.25em;color:var(--text-muted);
-        }
-
-        /* ─── Session Badge ─── */
-        .session-badge{
-            position:fixed;top:1rem;right:1rem;z-index:10;
-            font-family:'JetBrains Mono',monospace;font-size:0.65rem;
-            color:var(--text-muted);background:var(--bg-card);
-            border:1px solid var(--border);border-radius:20px;
-            padding:0.3rem 0.75rem;backdrop-filter:blur(10px);
-        }
-
-        /* ─── Chat Area ─── */
-        #chat-area{
-            flex:1;overflow-y:auto;padding:2rem 1rem;
-            display:flex;flex-direction:column;gap:1.25rem;
-            max-width:860px;margin:0 auto;width:100%;
-            position:relative;z-index:1;
-            scrollbar-width:thin;scrollbar-color:var(--border) transparent;
-        }
-        #chat-area::-webkit-scrollbar{width:5px}
-        #chat-area::-webkit-scrollbar-track{background:transparent}
-        #chat-area::-webkit-scrollbar-thumb{background:var(--border);border-radius:10px}
-
-        /* ─── Messages ─── */
-        .msg{
-            padding:1.25rem 1.5rem;border-radius:var(--radius);
-            max-width:88%;line-height:1.65;font-size:0.92rem;
-            animation:msgIn 0.35s cubic-bezier(0.16,1,0.3,1);
-        }
-        @keyframes msgIn{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
-        .msg-user{
-            align-self:flex-end;
-            background:linear-gradient(135deg,rgba(126,180,255,0.18),rgba(167,139,250,0.12));
-            border:1px solid rgba(126,180,255,0.2);color:var(--text);font-weight:500;
-        }
-        .msg-agent{
-            align-self:flex-start;
-            background:var(--bg-card);border:1px solid var(--border);
-        }
-
-        /* ─── Welcome ─── */
-        .welcome{text-align:center;padding:3rem 1rem;align-self:center}
-        .welcome-icon{
-            width:64px;height:64px;margin:0 auto 1.25rem;border-radius:18px;
-            background:var(--gradient);display:flex;align-items:center;justify-content:center;
-            font-size:1.6rem;box-shadow:0 0 40px rgba(126,180,255,0.2);
-        }
-        .welcome h2{font-size:1.3rem;font-weight:700;margin-bottom:0.5rem}
-        .welcome p{color:var(--text-dim);font-size:0.88rem;max-width:420px;margin:0 auto}
-        .suggestions{display:flex;flex-wrap:wrap;gap:0.5rem;justify-content:center;margin-top:1.25rem}
-        .suggestion{
-            font-size:0.78rem;padding:0.5rem 1rem;border-radius:20px;
-            background:var(--accent-dim);border:1px solid rgba(126,180,255,0.15);
-            color:var(--accent);cursor:pointer;transition:all 0.2s;
-        }
-        .suggestion:hover{background:rgba(126,180,255,0.22);border-color:var(--accent);transform:translateY(-1px)}
-
-        /* ─── Status ─── */
-        .status{
-            display:flex;align-items:center;gap:0.6rem;
-            font-size:0.82rem;color:var(--text-dim);padding:0.4rem 0;
-        }
-        .pulse{
-            width:8px;height:8px;border-radius:50%;background:var(--accent);
-            animation:pulse 1.5s ease-in-out infinite;
-        }
-        @keyframes pulse{0%,100%{opacity:1;box-shadow:0 0 0 0 var(--accent-glow)}50%{opacity:0.6;box-shadow:0 0 0 8px transparent}}
-
-        /* ─── Report ─── */
-        .report{display:flex;flex-direction:column;gap:1.25rem}
-        .report-header{display:flex;align-items:center;gap:0.75rem;flex-wrap:wrap}
-        .report-header h3{font-size:1rem;font-weight:700;flex:1}
-        .badge{
-            font-family:'JetBrains Mono',monospace;font-size:0.7rem;font-weight:600;
-            padding:0.3rem 0.7rem;border-radius:20px;
-        }
-        .badge-conf{background:var(--green-dim);color:var(--green)}
-        .badge-src{background:var(--accent-dim);color:var(--accent)}
-
-        .summary-box{
-            background:linear-gradient(135deg,rgba(126,180,255,0.07),rgba(167,139,250,0.05));
-            border-left:3px solid var(--accent);border-radius:var(--radius-sm);
-            padding:1.15rem 1.25rem;font-size:0.9rem;line-height:1.7;color:var(--text);
-        }
-
-        .findings{list-style:none;counter-reset:f}
-        .findings li{
-            counter-increment:f;position:relative;
-            padding:0.6rem 0 0.6rem 2.2rem;
-            border-bottom:1px solid rgba(26,32,64,0.5);
-            font-size:0.88rem;line-height:1.6;
-        }
-        .findings li:last-child{border-bottom:none}
-        .findings li::before{
-            content:counter(f);position:absolute;left:0;top:0.6rem;
-            width:1.5rem;height:1.5rem;border-radius:6px;
-            background:var(--accent-dim);color:var(--accent);
-            font-size:0.7rem;font-weight:700;
-            display:flex;align-items:center;justify-content:center;
-        }
-
-        .sources-grid{display:grid;gap:0.75rem}
-        .src-card{
-            display:block;text-decoration:none;color:inherit;
-            padding:1rem 1.15rem;border-radius:var(--radius-sm);
-            background:rgba(255,255,255,0.02);border:1px solid var(--border);
-            transition:all 0.25s;
-        }
-        .src-card:hover{
-            background:var(--bg-card-hover);border-color:rgba(126,180,255,0.2);
-            transform:translateY(-2px);box-shadow:0 8px 24px rgba(0,0,0,0.3);
-        }
-        .src-title{
-            color:var(--green);font-weight:600;font-size:0.85rem;
-            display:flex;align-items:center;gap:0.4rem;margin-bottom:0.35rem;
-        }
-        .src-title::before{content:'↗';font-size:0.7rem;opacity:0.6}
-        .src-snippet{font-size:0.8rem;color:var(--text-dim);line-height:1.55;
-            display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
-        .section-label{font-size:0.72rem;text-transform:uppercase;letter-spacing:0.15em;
-            color:var(--text-muted);font-weight:600;margin-bottom:0.5rem}
-
-        /* ─── Footer ─── */
-        footer{
-            position:relative;z-index:1;
-            padding:1rem 1.5rem 1.25rem;
-            border-top:1px solid var(--border);
-            background:linear-gradient(180deg,rgba(13,17,32,0.96),rgba(6,8,15,0.99));
-            backdrop-filter:blur(20px);
-        }
-        .footer-inner{max-width:860px;margin:0 auto}
-        .controls{
-            display:flex;align-items:center;gap:1.25rem;
-            margin-bottom:0.75rem;flex-wrap:wrap;
-        }
-        .control-group{display:flex;align-items:center;gap:0.5rem;font-size:0.78rem;color:var(--text-dim)}
-        .control-group label{font-weight:500}
-        .control-group span{
-            font-family:'JetBrains Mono',monospace;font-weight:600;
-            color:var(--accent);min-width:1.2em;text-align:center;
-        }
-        input[type=range]{
-            -webkit-appearance:none;height:4px;border-radius:4px;
-            background:var(--border);outline:none;cursor:pointer;width:100px;
-        }
-        input[type=range]::-webkit-slider-thumb{
-            -webkit-appearance:none;width:16px;height:16px;border-radius:50%;
-            background:var(--accent);border:2px solid var(--bg);cursor:pointer;
-            box-shadow:0 0 8px var(--accent-glow);
-        }
-        .btn-new{
-            background:transparent;border:1px solid var(--border);color:var(--text-dim);
-            padding:0.4rem 0.9rem;border-radius:8px;font-size:0.75rem;font-weight:600;
-            cursor:pointer;transition:all 0.2s;margin-left:auto;
-        }
-        .btn-new:hover{border-color:var(--accent);color:var(--accent)}
-        .input-row{display:flex;gap:0.75rem;align-items:center}
-        #query-input{
-            flex:1;background:var(--bg-card);border:1px solid var(--border);
-            padding:0.85rem 1.25rem;border-radius:var(--radius);
-            color:var(--text);font-size:0.92rem;font-family:'Inter',sans-serif;
-            outline:none;transition:border-color 0.25s,box-shadow 0.25s;
-        }
-        #query-input:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-dim)}
-        #query-input::placeholder{color:var(--text-muted)}
-        #submit-btn{
-            height:46px;padding:0 1.75rem;border:none;border-radius:var(--radius);
-            font-weight:700;font-size:0.88rem;cursor:pointer;
-            background:var(--gradient);color:#06080f;
-            transition:all 0.25s;position:relative;overflow:hidden;
-        }
-        #submit-btn:hover{transform:translateY(-1px);box-shadow:0 4px 20px var(--accent-glow)}
-        #submit-btn:disabled{opacity:0.4;cursor:not-allowed;transform:none;box-shadow:none}
-        #submit-btn::after{
-            content:'';position:absolute;inset:0;
-            background:linear-gradient(90deg,transparent,rgba(255,255,255,0.15),transparent);
-            transform:translateX(-100%);transition:transform 0.5s;
-        }
-        #submit-btn:not(:disabled):hover::after{transform:translateX(100%)}
-    </style>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>DEEPTRACE — Autonomous Research System</title>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=IBM+Plex+Sans:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+--bg1:#080A0F;--bg2:#0D1117;--bg3:#161B22;--bdr:#21262D;--bdr-a:#3FB950;
+--t1:#E6EDF3;--t2:#8B949E;--tm:#79C0FF;--ag:#3FB950;--ab:#58A6FF;
+--ao:#F0883E;--ar:#FF7B72;--ap:#BC8CFF;--glow:rgba(63,185,80,0.15);
+}
+html,body{height:100%;overflow:hidden;background:var(--bg1);color:var(--t1);font-family:'IBM Plex Sans',sans-serif}
+/* LOGIN */
+#login-screen{position:fixed;inset:0;z-index:9999;background:var(--bg1);display:flex;align-items:center;justify-content:center;transition:opacity .5s}
+.login-bg{position:absolute;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(63,185,80,0.03) 2px,rgba(63,185,80,0.03) 4px)}
+.login-card{position:relative;width:380px;padding:2.5rem;background:var(--bg2);border:1px solid var(--bdr);border-radius:8px;text-align:center}
+.login-card .logo-text{font-family:'Share Tech Mono',monospace;font-size:28px;color:var(--ag);letter-spacing:.3em;margin-bottom:4px}
+.login-card .logo-sub{font-size:10px;color:var(--t2);text-transform:uppercase;letter-spacing:.2em;margin-bottom:24px}
+.login-card .clearance{font-size:10px;color:var(--ao);text-transform:uppercase;letter-spacing:.15em;margin-bottom:20px;font-weight:600}
+.login-card input{width:100%;padding:10px 14px;margin-bottom:12px;background:var(--bg3);border:1px solid var(--bdr);border-radius:4px;color:var(--t1);font-size:14px;font-family:'IBM Plex Mono',monospace;outline:none}
+.login-card input:focus{border-color:var(--ag)}
+.login-card button{width:100%;padding:11px;background:transparent;border:1px solid var(--ag);color:var(--ag);font-family:'Share Tech Mono',monospace;font-size:14px;letter-spacing:.15em;cursor:pointer;border-radius:4px;transition:all .2s;margin-bottom:16px}
+.login-card button:hover{background:var(--ag);color:#080A0F}
+.login-card .htf{font-size:10px;color:var(--t2);opacity:.6}
+.login-err{color:var(--ar);font-size:12px;margin-bottom:8px;min-height:18px}
+/* MAIN APP */
+#main-ui{display:none;flex-direction:column;height:100vh}
+/* HEADER */
+header{display:flex;align-items:center;padding:0 16px;height:44px;background:var(--bg2);border-bottom:1px solid var(--bdr);gap:16px;flex-shrink:0}
+.h-logo{font-family:'Share Tech Mono',monospace;font-size:16px;color:var(--ag);letter-spacing:.3em}
+.h-sub{font-size:9px;color:var(--t2);text-transform:uppercase;letter-spacing:.15em;margin-left:-8px}
+.h-status{display:flex;align-items:center;gap:6px;margin-left:auto;font-size:11px;color:var(--t2)}
+.h-dot{width:7px;height:7px;border-radius:50%;background:var(--ag);animation:pulse 2s ease-in-out infinite}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 0 var(--glow)}50%{box-shadow:0 0 0 6px transparent}}
+.h-sid{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--t2);margin-left:12px}
+.h-btn{background:none;border:1px solid var(--bdr);color:var(--t2);font-size:10px;padding:4px 10px;border-radius:3px;cursor:pointer;font-family:'IBM Plex Mono',monospace;transition:all .2s}
+.h-btn:hover{border-color:var(--ag);color:var(--ag)}
+/* BODY */
+.body-wrap{display:flex;flex:1;overflow:hidden}
+/* LEFT PANEL */
+.left-panel{width:220px;background:var(--bg2);border-right:1px solid var(--bdr);display:flex;flex-direction:column;flex-shrink:0}
+.panel-title{font-size:10px;text-transform:uppercase;letter-spacing:.15em;color:var(--t2);padding:12px 14px 8px;display:flex;align-items:center;gap:6px}
+.panel-title .badge{background:var(--bg3);color:var(--ag);font-size:9px;padding:1px 6px;border-radius:8px;font-family:'IBM Plex Mono',monospace}
+.session-list{flex:1;overflow-y:auto;padding:4px 8px}
+.session-list::-webkit-scrollbar{width:3px}
+.session-list::-webkit-scrollbar-thumb{background:var(--bdr);border-radius:4px}
+.s-item{padding:10px;border-radius:4px;cursor:pointer;border-left:2px solid transparent;margin-bottom:4px;transition:all .2s}
+.s-item:hover{background:var(--bg3);border-left-color:var(--ag)}
+.s-item .sq{font-size:12px;color:var(--t1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:3px}
+.s-item .sm{font-size:10px;color:var(--t2);display:flex;gap:8px;align-items:center}
+.s-item .conf-bar{width:40px;height:3px;background:var(--bg1);border-radius:2px;overflow:hidden}
+.s-item .conf-bar .fill{height:100%;background:var(--ag);border-radius:2px}
+.clear-btn{margin:8px;padding:6px;background:none;border:1px solid var(--bdr);color:var(--t2);font-size:10px;text-transform:uppercase;letter-spacing:.1em;cursor:pointer;border-radius:3px;transition:all .2s}
+.clear-btn:hover{border-color:var(--ar);color:var(--ar)}
+/* CENTER */
+.center-panel{flex:1;display:flex;flex-direction:column;overflow:hidden;position:relative}
+.center-panel::after{content:'';position:absolute;inset:0;pointer-events:none;background:repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(255,255,255,0.008) 3px,rgba(255,255,255,0.008) 4px);z-index:0}
+.center-scroll{flex:1;overflow-y:auto;padding:20px;position:relative;z-index:1}
+.center-scroll::-webkit-scrollbar{width:4px}
+.center-scroll::-webkit-scrollbar-thumb{background:var(--bdr);border-radius:4px}
+/* EMPTY STATE */
+.empty-state{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;opacity:.5}
+.empty-state .e-logo{font-family:'Share Tech Mono',monospace;font-size:32px;color:var(--ag);letter-spacing:.3em;margin-bottom:12px}
+.empty-state p{font-size:12px;color:var(--t2);text-transform:uppercase;letter-spacing:.2em}
+/* STEP FEED */
+.step-line{font-family:'IBM Plex Mono',monospace;font-size:12px;padding:4px 0;animation:slideIn .25s ease;display:flex;gap:8px;line-height:1.6}
+@keyframes slideIn{from{opacity:0;transform:translateX(-10px)}to{opacity:1;transform:translateX(0)}}
+.step-line .sn{color:var(--ag);min-width:60px}
+.step-line .st{color:var(--t2);min-width:56px}
+.step-line .sa{color:var(--ap)}
+.step-line .sm{color:var(--t2);flex:1}
+.step-line.error .sa{color:var(--ar)}
+/* REPORT CARDS */
+.rpt{display:flex;flex-direction:column;gap:12px;margin-top:16px}
+.card{background:var(--bg2);border:1px solid var(--bdr);border-radius:6px;padding:16px;animation:cardIn .3s ease}
+@keyframes cardIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.card-title{font-size:10px;text-transform:uppercase;letter-spacing:.15em;color:var(--t2);margin-bottom:10px;display:flex;align-items:center;gap:6px}
+.card-title::before{content:'';width:3px;height:12px;background:var(--ag);border-radius:2px}
+.card.conflict{border-color:var(--ao)}
+.card.conflict .card-title::before{background:var(--ao)}
+.summary-text{font-size:14px;line-height:1.7;color:var(--t1)}
+.finding{display:flex;align-items:flex-start;gap:8px;padding:8px 0;border-bottom:1px solid rgba(33,38,45,.5);font-size:13px;line-height:1.6}
+.finding:last-child{border:none}
+.finding .fi{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--ag);min-width:20px;padding-top:3px}
+.finding .ft{flex:1;color:var(--t1)}
+.cbadge{font-size:9px;font-family:'IBM Plex Mono',monospace;padding:2px 6px;border-radius:3px;font-weight:600}
+.cbadge.HIGH{background:rgba(63,185,80,.15);color:var(--ag)}
+.cbadge.MED{background:rgba(240,136,62,.12);color:var(--ao)}
+.cbadge.LOW{background:rgba(255,123,114,.12);color:var(--ar)}
+.src-row{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid rgba(33,38,45,.5);font-size:12px}
+.src-row:last-child{border:none}
+.src-row .si{font-family:'IBM Plex Mono',monospace;color:var(--ag);min-width:20px}
+.src-row .st{flex:1;color:var(--t1);font-weight:500}
+.src-row a{color:var(--tm);font-family:'IBM Plex Mono',monospace;font-size:11px;text-decoration:none}
+.src-row a:hover{text-decoration:underline}
+.followup{padding:6px 12px;background:var(--bg3);border:1px solid var(--bdr);border-radius:4px;color:var(--ab);font-size:12px;cursor:pointer;transition:all .2s;text-align:left}
+.followup:hover{border-color:var(--ag);color:var(--ag)}
+.conf-lg{font-family:'Share Tech Mono',monospace;font-size:48px;color:var(--ag)}
+.conf-exp{font-size:13px;color:var(--t2);margin-top:8px;line-height:1.6}
+.refined-badge{font-size:9px;color:var(--ap);margin-left:6px}
+/* RIGHT PANEL */
+.right-panel{width:280px;background:var(--bg2);border-left:1px solid var(--bdr);display:flex;flex-direction:column;flex-shrink:0}
+.src-cards{flex:1;overflow-y:auto;padding:8px}
+.src-cards::-webkit-scrollbar{width:3px}
+.src-cards::-webkit-scrollbar-thumb{background:var(--bdr);border-radius:4px}
+.src-card{padding:10px;border-left:2px solid var(--bdr);margin-bottom:6px;border-radius:0 4px 4px 0;background:var(--bg3);transition:all .2s;animation:cardIn .3s ease}
+.src-card:hover{border-left-color:var(--ag);background:rgba(22,27,34,.8)}
+.src-card .domain{font-size:12px;font-weight:600;color:var(--t1);margin-bottom:3px}
+.src-card .meta{font-size:10px;color:var(--t2);font-family:'IBM Plex Mono',monospace;display:flex;gap:8px;margin-bottom:6px}
+.src-card .rel-bar{height:3px;background:var(--bg1);border-radius:2px;margin-bottom:6px}
+.src-card .rel-bar .fill{height:100%;background:var(--ag);border-radius:2px;transition:width .3s}
+.src-card .preview{font-size:11px;color:var(--t2);line-height:1.5;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+/* INPUT BAR */
+.input-bar{padding:12px 16px;background:var(--bg2);border-top:1px solid var(--bdr);flex-shrink:0}
+.depth-row{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.d-btn{font-family:'IBM Plex Mono',monospace;font-size:10px;padding:4px 12px;border:1px solid var(--bdr);background:none;color:var(--t2);border-radius:3px;cursor:pointer;transition:all .2s;text-transform:uppercase;letter-spacing:.05em}
+.d-btn.active{border-color:var(--ag);color:var(--ag);background:var(--glow)}
+.d-btn:hover{border-color:var(--ag)}
+.est-info{font-size:10px;color:var(--t2);font-family:'IBM Plex Mono',monospace;margin-left:auto}
+.input-row{display:flex;gap:8px}
+#q-input{flex:1;background:var(--bg3);border:1px solid var(--bdr);padding:10px 14px;color:var(--t1);font-family:'IBM Plex Mono',monospace;font-size:13px;border-radius:4px;outline:none;transition:border .2s}
+#q-input:focus{border-color:var(--ag)}
+#q-input::placeholder{color:var(--t2)}
+#exec-btn{padding:10px 24px;background:none;border:1px solid var(--ag);color:var(--ag);font-family:'Share Tech Mono',monospace;font-size:13px;letter-spacing:.1em;cursor:pointer;border-radius:4px;transition:all .2s}
+#exec-btn:hover{background:var(--ag);color:#080A0F}
+#exec-btn:disabled{opacity:.3;cursor:not-allowed}
+/* RESPONSIVE */
+@media(max-width:1024px){.left-panel{display:none}.right-panel{display:none}}
+</style>
 </head>
 <body>
-    <div class="session-badge" id="session-display">SESSION: —</div>
-    <header>
-        <div class="logo">
-            <div class="logo-icon">D</div>
-            <div>
-                <h1>DeepTrace</h1>
-                <div class="subtitle">Autonomous Deep Research Agent</div>
-            </div>
-        </div>
-    </header>
-
-    <div id="chat-area">
-        <div class="welcome" id="welcome-screen">
-            <div class="welcome-icon">&#x1F50D;</div>
-            <h2>What would you like to research?</h2>
-            <p>I scrape live web sources, score relevance with AI, and synthesize cited research reports in real-time.</p>
-            <div class="suggestions">
-                <div class="suggestion" onclick="useSuggestion(this)">AI safety regulations EU 2025</div>
-                <div class="suggestion" onclick="useSuggestion(this)">Top open-source LLMs and benchmarks</div>
-                <div class="suggestion" onclick="useSuggestion(this)">Quantum computing breakthroughs 2025</div>
-            </div>
-        </div>
-    </div>
-
-    <footer>
-        <div class="footer-inner">
-            <div class="controls">
-                <div class="control-group">
-                    <label>Sources:</label>
-                    <input type="range" id="max-sources" min="3" max="10" value="5"
-                           oninput="document.getElementById('src-val').textContent=this.value">
-                    <span id="src-val">5</span>
-                </div>
-                <button class="btn-new" onclick="resetChat()">&#x21BB; New Research</button>
-            </div>
-            <div class="input-row">
-                <input type="text" id="query-input" placeholder="Enter your research query..."
-                       onkeydown="if(event.key==='Enter')startResearch()">
-                <button id="submit-btn" onclick="startResearch()">Research</button>
-            </div>
-        </div>
-    </footer>
-
-    <script>
-        let sessionId=localStorage.getItem('dt_session')||'dt-'+crypto.randomUUID().slice(0,8);
-        localStorage.setItem('dt_session',sessionId);
-        document.getElementById('session-display').textContent='SESSION: '+sessionId;
-
-        function useSuggestion(el){
-            document.getElementById('query-input').value=el.textContent;
-            startResearch();
-        }
-
-        function addMsg(role,content,isHtml=false){
-            const w=document.getElementById('welcome-screen');
-            if(w)w.remove();
-            const area=document.getElementById('chat-area');
-            const d=document.createElement('div');
-            d.className='msg msg-'+role;
-            if(isHtml)d.innerHTML=content;else d.textContent=content;
-            area.appendChild(d);
-            area.scrollTop=area.scrollHeight;
-            return d;
-        }
-
-        function resetChat(){
-            const area=document.getElementById('chat-area');
-            area.innerHTML=`<div class="welcome" id="welcome-screen">
-                <div class="welcome-icon">&#x1F50D;</div>
-                <h2>What would you like to research?</h2>
-                <p>I scrape live web sources, score relevance with AI, and synthesize cited research reports in real-time.</p>
-                <div class="suggestions">
-                    <div class="suggestion" onclick="useSuggestion(this)">AI safety regulations EU 2025</div>
-                    <div class="suggestion" onclick="useSuggestion(this)">Top open-source LLMs and benchmarks</div>
-                    <div class="suggestion" onclick="useSuggestion(this)">Quantum computing breakthroughs 2025</div>
-                </div>
-            </div>`;
-            document.getElementById('query-input').value='';
-        }
-
-        async function startResearch(){
-            const input=document.getElementById('query-input');
-            const query=input.value.trim();
-            if(!query)return;
-            const maxSrc=document.getElementById('max-sources').value;
-            const btn=document.getElementById('submit-btn');
-            input.value='';input.disabled=true;btn.disabled=true;
-            addMsg('user',query);
-            const agent=addMsg('agent','');
-            agent.innerHTML='<div id="st-container"></div><div id="rpt-container"></div>';
-            const stC=agent.querySelector('#st-container');
-            const rptC=agent.querySelector('#rpt-container');
-
-            const es=new EventSource(`/research/stream?query=${encodeURIComponent(query)}&max_sources=${maxSrc}`);
-            es.onmessage=e=>{
-                const d=JSON.parse(e.data);
-                if(d.status==='done'){
-                    es.close();stC.innerHTML='';
-                    renderReport(rptC,d.report);
-                    input.disabled=false;btn.disabled=false;
-                }else if(d.status==='error'){
-                    es.close();
-                    stC.innerHTML=`<div class="status" style="color:var(--red)">✕ ${d.message}</div>`;
-                    input.disabled=false;btn.disabled=false;
-                }else{
-                    stC.innerHTML=`<div class="status"><div class="pulse"></div>${d.message}</div>`;
-                }
-                document.getElementById('chat-area').scrollTop=9e9;
-            };
-            es.onerror=()=>{
-                es.close();
-                stC.innerHTML='<div class="status" style="color:var(--red)">✕ Connection lost</div>';
-                input.disabled=false;btn.disabled=false;
-            };
-        }
-
-        function renderReport(el,r){
-            el.innerHTML=`<div class="report">
-                <div class="report-header">
-                    <h3>Research Report</h3>
-                    <span class="badge badge-conf">Confidence ${(r.confidence_score*100).toFixed(0)}%</span>
-                    <span class="badge badge-src">${r.sources_scraped} sources</span>
-                </div>
-                <div class="summary-box">${esc(r.summary)}</div>
-                <div>
-                    <div class="section-label">Key Findings</div>
-                    <ol class="findings">${r.key_findings.map(f=>`<li>${esc(f)}</li>`).join('')}</ol>
-                </div>
-                <div>
-                    <div class="section-label">Sources</div>
-                    <div class="sources-grid">${r.citations.map(c=>`
-                        <a href="${esc(c.url)}" target="_blank" rel="noopener" class="src-card">
-                            <div class="src-title">[${c.index}] ${esc(c.title)}</div>
-                            <div class="src-snippet">${esc(c.snippet)}</div>
-                        </a>`).join('')}
-                    </div>
-                </div>
-            </div>`;
-        }
-
-        function esc(s){const d=document.createElement('div');d.textContent=s||'';return d.innerHTML}
-    </script>
+<!-- LOGIN -->
+<div id="login-screen">
+<div class="login-bg"></div>
+<div class="login-card">
+<div class="logo-text">DEEPTRACE</div>
+<div class="logo-sub">AUTONOMOUS RESEARCH SYSTEM</div>
+<div class="clearance">⚠ CLEARANCE REQUIRED</div>
+<div class="login-err" id="login-error" style="display:none"></div>
+<input id="username" placeholder="USERNAME" autocomplete="off">
+<input id="password" type="password" placeholder="PASSWORD" onkeydown="if(event.key==='Enter')handleLogin()">
+<button onclick="handleLogin()">AUTHENTICATE</button>
+<div class="htf">Built for Hack To Future 3.0</div>
+</div>
+</div>
+<!-- MAIN APP -->
+<div id="main-ui">
+<header>
+<span class="h-logo">DEEPTRACE</span>
+<span class="h-sub">AUTONOMOUS RESEARCH SYSTEM v2.0</span>
+<div class="h-status"><div class="h-dot"></div>SYSTEM ONLINE</div>
+<span class="h-sid" id="h-sid"></span>
+<button class="h-btn" onclick="doExport()">EXPORT</button>
+<button class="h-btn" onclick="doLogout()">LOGOUT</button>
+</header>
+<div class="body-wrap">
+<!-- LEFT -->
+<div class="left-panel">
+<div class="panel-title">RESEARCH SESSIONS <span class="badge" id="sess-count">0</span></div>
+<div class="session-list" id="sess-list"></div>
+<button class="clear-btn" onclick="clearHistory()">CLEAR HISTORY</button>
+</div>
+<!-- CENTER -->
+<div class="center-panel">
+<div class="center-scroll" id="center">
+<div class="empty-state" id="empty"><div class="e-logo">DEEPTRACE</div><p>ENTER QUERY TO BEGIN DEEP RESEARCH</p></div>
+</div>
+</div>
+<!-- RIGHT -->
+<div class="right-panel">
+<div class="panel-title">SOURCE INTELLIGENCE <span class="badge" id="src-count">0</span></div>
+<div class="src-cards" id="src-panel"></div>
+</div>
+</div>
+<!-- INPUT -->
+<div class="input-bar">
+<div class="depth-row">
+<button class="d-btn" data-d="quick" onclick="setDepth(this)">QUICK</button>
+<button class="d-btn active" data-d="standard" onclick="setDepth(this)">STANDARD</button>
+<button class="d-btn" data-d="deep" onclick="setDepth(this)">DEEP</button>
+<span class="est-info" id="est-info">Est. ~90s | 5 sources</span>
+</div>
+<div class="input-row">
+<input id="q-input" placeholder="ENTER RESEARCH QUERY..." onkeydown="if(event.key==='Enter')exec()">
+<button id="exec-btn" onclick="exec()">EXECUTE</button>
+</div>
+</div>
+</div>
+<script>
+let depth='standard',sessionId='dt-'+crypto.randomUUID().slice(0,8),lastReport=null;
+const depthCfg={quick:{t:'~30s',s:3},standard:{t:'~90s',s:5},deep:{t:'~3min',s:10}};
+// Auth
+window.onload = function() {
+  if (localStorage.getItem('dt_auth') === 'true') {
+    document.getElementById('login-screen').style.display = 'none';
+    document.getElementById('main-ui').style.display = 'flex';
+  }
+  document.getElementById('h-sid').textContent='SID: '+sessionId;
+  loadSessions();
+};
+function handleLogin() {
+  const username = document.getElementById('username').value.trim();
+  const password = document.getElementById('password').value.trim();
+  if (username === 'admin' && password === 'deeptrace') {
+    localStorage.setItem('dt_auth', 'true');
+    document.getElementById('login-screen').style.display = 'none';
+    document.getElementById('main-ui').style.display = 'flex';
+  } else {
+    document.getElementById('login-error').textContent = 'Invalid credentials. Use admin / deeptrace';
+    document.getElementById('login-error').style.display = 'block';
+  }
+}
+function doLogout(){localStorage.removeItem('dt_auth');location.reload()}
+function setDepth(el){document.querySelectorAll('.d-btn').forEach(b=>b.classList.remove('active'));el.classList.add('active');depth=el.dataset.d;const c=depthCfg[depth];document.getElementById('est-info').textContent='Est. '+c.t+' | '+c.s+' sources'}
+function esc(s){const d=document.createElement('div');d.textContent=s||'';return d.innerHTML}
+function getDomain(u){try{return new URL(u).hostname.replace('www.','')}catch(e){return u}}
+// Sessions
+async function loadSessions(){
+try{const r=await fetch('/sessions');const d=await r.json();const list=document.getElementById('sess-list');list.innerHTML='';
+document.getElementById('sess-count').textContent=d.sessions.length;
+d.sessions.forEach(s=>{const el=document.createElement('div');el.className='s-item';
+el.innerHTML='<div class="sq">'+esc(s.query.slice(0,40))+'</div><div class="sm"><span>'+esc((s.timestamp||'').slice(11,19))+'</span><span>'+s.sources_scraped+'src</span><div class="conf-bar"><div class="fill" style="width:'+(s.confidence_score*100)+'%"></div></div></div>';
+el.onclick=()=>loadSession(s.session_id);list.appendChild(el)})}catch(e){}}
+async function loadSession(sid){try{const r=await fetch('/session/'+sid);const d=await r.json();if(d.history&&d.history.length){renderFullReport(d.history[d.history.length-1])}}catch(e){}}
+async function clearHistory(){await fetch('/sessions/all',{method:'DELETE'});loadSessions()}
+function doExport(){if(lastReport&&lastReport.session_id)window.open('/research/export?session_id='+lastReport.session_id+'&format=markdown')}
+// Research
+function exec(){
+const inp=document.getElementById('q-input'),q=inp.value.trim();if(!q)return;
+inp.value='';inp.disabled=true;document.getElementById('exec-btn').disabled=true;
+const center=document.getElementById('center');center.innerHTML='';
+document.getElementById('src-panel').innerHTML='';document.getElementById('src-count').textContent='0';
+let srcTotal=0;
+const es=new EventSource('/research/stream?query='+encodeURIComponent(q)+'&max_sources='+depthCfg[depth].s+'&depth='+depth);
+es.onmessage=e=>{
+const d=JSON.parse(e.data);
+if(d.status==='done'){es.close();lastReport=d.report;renderFullReport(d.report);inp.disabled=false;document.getElementById('exec-btn').disabled=false;loadSessions();return}
+if(d.status==='error'){es.close();addStep(d,'error');inp.disabled=false;document.getElementById('exec-btn').disabled=false;return}
+addStep(d);
+if(d.sources){d.sources.forEach(s=>{srcTotal++;addSourceCard(s)});document.getElementById('src-count').textContent=srcTotal}
+if(d.scored_sources){d.scored_sources.forEach(s=>{updateSourceScore(s)})}
+center.scrollTop=center.scrollHeight;
+};
+es.onerror=()=>{es.close();addStep({step:'?',timestamp:'',status:'error',message:'Connection lost'},'error');inp.disabled=false;document.getElementById('exec-btn').disabled=false};
+addUserMsg(q);
+}
+function addUserMsg(q){const d=document.createElement('div');d.style.cssText='font-size:13px;color:var(--ag);font-family:"IBM Plex Mono",monospace;padding:8px 0;border-bottom:1px solid var(--bdr);margin-bottom:8px';d.textContent='> '+q;document.getElementById('center').appendChild(d)}
+function addStep(d,cls){const el=document.createElement('div');el.className='step-line '+(cls||'');
+el.innerHTML='<span class="sn">[STEP '+String(d.step||0).padStart(2,'0')+']</span><span class="st">['+(d.timestamp||'')+']</span><span class="sa">'+esc(d.status||'').toUpperCase()+'</span><span class="sm">'+esc(d.message||'')+'</span>';
+document.getElementById('center').appendChild(el)}
+function addSourceCard(s){const el=document.createElement('div');el.className='src-card';el.dataset.url=s.url;
+el.innerHTML='<div class="domain">'+esc(getDomain(s.url))+'</div><div class="meta"><span>'+(s.scrape_timestamp||'').slice(11,19)+'</span><span>'+s.word_count+'w</span></div><div class="rel-bar"><div class="fill" style="width:50%"></div></div><div class="preview">'+esc((s.preview||'').slice(0,200))+'</div>';
+document.getElementById('src-panel').appendChild(el)}
+function updateSourceScore(s){document.querySelectorAll('.src-card').forEach(el=>{if(el.dataset.url===s.url){const bar=el.querySelector('.rel-bar .fill');if(bar)bar.style.width=(s.relevance_score*100)+'%'}})}
+function renderFullReport(r){
+const center=document.getElementById('center');
+let html='<div class="rpt">';
+html+='<div class="card"><div class="card-title">QUERY</div><div style="font-family:IBM Plex Mono,monospace;color:var(--tm);font-size:13px">'+esc(r.query)+'</div></div>';
+html+='<div class="card"><div class="card-title">EXECUTIVE SUMMARY</div><div class="summary-text">'+esc(r.summary)+'</div></div>';
+// Key findings
+html+='<div class="card"><div class="card-title">KEY FINDINGS</div>';
+(r.key_findings||[]).forEach((f,i)=>{
+let badge='MED',fc=r.finding_confidences&&r.finding_confidences[i];
+if(fc)badge=fc.confidence||'MED';
+html+='<div class="finding"><span class="fi">'+(i+1)+'</span><span class="ft">'+esc(f)+'</span><span class="cbadge '+badge+'">'+badge+'</span></div>';
+});
+html+='</div>';
+// Refined findings
+if(r.refined_findings&&r.refined_findings.length){html+='<div class="card"><div class="card-title">🔄 REFINED FINDINGS</div>';
+r.refined_findings.forEach((f,i)=>{var text=typeof f==='string'?f:(f.finding||f.text||f.content||JSON.stringify(f));html+='<div class="finding"><span class="fi">R'+(i+1)+'</span><span class="ft">'+esc(text)+'<span class="refined-badge">🔄 REFINED</span></span></div>'});
+html+='</div>'}
+// Sources
+html+='<div class="card" id="sources-card"><div class="card-title">SOURCES</div>';
+var srcs=r.citations||r.sources||r.urls||[];
+if(!srcs||srcs.length===0){html+='<p style="color:var(--t2)">No sources available</p>'}
+else{srcs.forEach((c,i)=>{
+var url=c.url||c.link||c||'';
+var title=c.title||c.name||(url?getDomain(url):'Source '+(i+1));
+var rel=c.relevance_score||c.score||0.8;
+var domain=url?getDomain(url):'unknown';
+html+='<div class="src-row"><span class="si"><img src="https://www.google.com/s2/favicons?domain='+esc(domain)+'&sz=16" onerror="this.style.display=\'none\'" style="width:14px;height:14px;vertical-align:middle;margin-right:4px">['+(c.index||(i+1))+']</span><span class="st">'+esc(title)+'</span><a href="'+esc(url)+'" target="_blank">'+esc(domain)+'</a><span style="color:var(--ag);font-family:IBM Plex Mono,monospace;font-size:11px;min-width:36px;text-align:right">'+Math.round(rel*100)+'%</span></div>'})}
+html+='</div>';
+// Conflicts
+if(r.conflicts&&r.conflicts.length&&r.conflicts[0]){html+='<div class="card conflict"><div class="card-title">⚠ CONFLICTS</div>';
+r.conflicts.forEach(c=>{html+='<div style="font-size:13px;color:var(--ao);padding:4px 0">'+esc(c)+'</div>'});
+html+='</div>'}
+// Follow-ups
+if(r.suggested_followups&&r.suggested_followups.length){html+='<div class="card"><div class="card-title">FOLLOW-UP QUERIES</div><div style="display:flex;flex-direction:column;gap:6px">';
+r.suggested_followups.forEach(f=>{html+='<div class="followup" onclick="useFollowup(this)">'+esc(f)+'</div>'});
+html+='</div></div>'}
+// Confidence
+var cscore=(r.confidence_score||0)>1?Math.round(r.confidence_score):Math.round((r.confidence_score||0)*100);
+html+='<div class="card"><div class="card-title">CONFIDENCE ASSESSMENT</div><div class="conf-lg">'+cscore+'%</div><div class="conf-exp">'+esc(r.confidence_explanation||'')+'</div></div>';
+html+='</div>';
+// Keep existing step lines, append report
+const existing=center.innerHTML;
+center.innerHTML=existing+html;
+center.scrollTop=center.scrollHeight;
+}
+function useFollowup(el){document.getElementById('q-input').value=el.textContent;exec()}
+</script>
 </body>
 </html>

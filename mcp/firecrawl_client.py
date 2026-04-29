@@ -1,6 +1,7 @@
 import os
 import httpx
 import asyncio
+import time
 from typing import List, Optional
 from models import ScrapedSource
 
@@ -34,8 +35,10 @@ async def scrape_url(url: str, timeout: int = 30) -> Optional[ScrapedSource]:
             return ScrapedSource(
                 url=url,
                 title=metadata.get("title", url),
-                content=content[:8000],  # cap per source
-                relevance_score=0.0  # scored later by aggregator
+                content=content[:8000],
+                relevance_score=0.0,
+                word_count=len(content.split()),
+                scrape_timestamp=time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
             )
     except Exception as e:
         print(f"Firecrawl error for {url}: {e}")
@@ -52,7 +55,7 @@ async def search_and_scrape(
     }
     payload = {
         "query": query,
-        "limit": num_sources + 2,  # fetch extras in case some fail
+        "limit": num_sources + 2,
         "scrapeOptions": {
             "formats": ["markdown"],
             "onlyMainContent": True
@@ -70,6 +73,7 @@ async def search_and_scrape(
             results = data.get("data", [])
 
         sources = []
+        ts = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
         for result in results:
             url = result.get("url", "")
             content = result.get("markdown", "")
@@ -79,7 +83,9 @@ async def search_and_scrape(
                     url=url,
                     title=metadata.get("title", url),
                     content=content[:8000],
-                    relevance_score=0.0
+                    relevance_score=0.0,
+                    word_count=len(content.split()),
+                    scrape_timestamp=ts
                 ))
         return sources[:num_sources]
 
