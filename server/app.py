@@ -15,7 +15,7 @@ from fastapi.responses import HTMLResponse, StreamingResponse, PlainTextResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from models import ResearchQuery, ResearchReport
-from mcp.firecrawl_client import search_and_scrape
+from mcp.firecrawl_client import search_and_scrape, FirecrawlSearchError
 from research.aggregator import aggregate_sources
 from research.synthesizer import (
     synthesize, decompose_query, rate_confidence,
@@ -124,7 +124,11 @@ async def stream_research(
             for i, sq in enumerate(sub_questions):
                 per_q = max(3, num_sources // len(sub_questions))
                 yield emit("searching", f"Searching: {sq[:80]}...")
-                results = await search_and_scrape(query=sq, num_sources=per_q)
+                try:
+                    results = await search_and_scrape(query=sq, num_sources=per_q)
+                except FirecrawlSearchError as e:
+                    yield emit("error", str(e))
+                    return
                 all_sources.extend(results)
                 # Emit sources for real-time right panel updates
                 source_data = [{"url": s.url, "title": s.title, "word_count": s.word_count,

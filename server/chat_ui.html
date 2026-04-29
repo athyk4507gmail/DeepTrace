@@ -1,305 +1,495 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>DEEPTRACE — Autonomous Research System</title>
-<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=IBM+Plex+Sans:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>DEEPTRACE - Autonomous Deep Research</title>
 <style>
+@import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Rajdhani:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@300;400;500&display=swap');
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
---bg1:#080A0F;--bg2:#0D1117;--bg3:#161B22;--bdr:#21262D;--bdr-a:#3FB950;
---t1:#E6EDF3;--t2:#8B949E;--tm:#79C0FF;--ag:#3FB950;--ab:#58A6FF;
---ao:#F0883E;--ar:#FF7B72;--ap:#BC8CFF;--glow:rgba(63,185,80,0.15);
+--bg-void:#030508;--bg-deep:#070B10;--bg-panel:#0A1018;--bg-card:#0F1923;--bg-card-hover:#141F2E;
+--border-dim:rgba(255,255,255,0.06);--border-glow:rgba(0,255,136,0.4);--border-active:#00FF88;
+--text-primary:#E8F4F8;--text-secondary:#5A7A8A;--text-mono:#00FF88;
+--accent-green:#00FF88;--accent-cyan:#00D4FF;--accent-amber:#FFB300;--accent-red:#FF4444;--accent-purple:#8B5CF6;
+--glow-green:0 0 20px rgba(0,255,136,0.3);--glow-cyan:0 0 20px rgba(0,212,255,0.3);
 }
-html,body{height:100%;overflow:hidden;background:var(--bg1);color:var(--t1);font-family:'IBM Plex Sans',sans-serif}
+html,body{width:100%;height:100%;overflow:hidden;background:var(--bg-void);color:var(--text-primary);font-family:'Rajdhani',sans-serif}
+#bg-canvas{position:fixed;inset:0;z-index:0}
+.bg-overlay{position:fixed;inset:0;pointer-events:none;background:radial-gradient(circle at 25% 30%,rgba(0,255,136,.05),transparent 40%),radial-gradient(circle at 70% 80%,rgba(0,212,255,.04),transparent 35%),linear-gradient(180deg,rgba(3,5,8,.2),rgba(3,5,8,.9));z-index:1}
+.screen{position:fixed;inset:0;display:none;z-index:3}
+.screen.active{display:flex}
+.scan-transition{position:fixed;inset:0;pointer-events:none;z-index:20;opacity:0;background:rgba(0,255,136,.06)}
+.scan-transition.active{animation:scanFlash .8s ease}
+.scan-transition::before{content:'';position:absolute;left:0;right:0;height:3px;background:linear-gradient(90deg,transparent,var(--accent-green),transparent);opacity:0}
+.scan-transition.active::before{animation:scanLine .2s linear}
+@keyframes scanLine{from{top:0;opacity:1}to{top:100%;opacity:1}}
+@keyframes scanFlash{0%{opacity:0}20%{opacity:1}60%{opacity:.4}100%{opacity:0}}
+.action-btn{position:relative;overflow:hidden;background:transparent;border:1px solid var(--accent-green);color:var(--accent-green);font-family:'Rajdhani',sans-serif;font-weight:700;letter-spacing:.3em;text-transform:uppercase;cursor:pointer;transition:transform .15s ease,color .2s ease}
+.action-btn::before{content:'';position:absolute;left:0;top:0;bottom:0;width:0;background:var(--accent-green);transition:width .25s ease;z-index:-1}
+.action-btn:hover{color:#020507}
+.action-btn:hover::before{width:100%}
+.action-btn:active{transform:scale(.98)}
+.status-dot{width:7px;height:7px;background:var(--accent-green);display:inline-block;box-shadow:var(--glow-green);animation:blink 1.8s ease-in-out infinite}
+@keyframes blink{0%,100%{opacity:.5}50%{opacity:1}}
 /* LOGIN */
-#login-screen{position:fixed;inset:0;z-index:9999;background:var(--bg1);display:flex;align-items:center;justify-content:center;transition:opacity .5s}
-.login-bg{position:absolute;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(63,185,80,0.03) 2px,rgba(63,185,80,0.03) 4px)}
-.login-card{position:relative;width:380px;padding:2.5rem;background:var(--bg2);border:1px solid var(--bdr);border-radius:8px;text-align:center}
-.login-card .logo-text{font-family:'Share Tech Mono',monospace;font-size:28px;color:var(--ag);letter-spacing:.3em;margin-bottom:4px}
-.login-card .logo-sub{font-size:10px;color:var(--t2);text-transform:uppercase;letter-spacing:.2em;margin-bottom:24px}
-.login-card .clearance{font-size:10px;color:var(--ao);text-transform:uppercase;letter-spacing:.15em;margin-bottom:20px;font-weight:600}
-.login-card input{width:100%;padding:10px 14px;margin-bottom:12px;background:var(--bg3);border:1px solid var(--bdr);border-radius:4px;color:var(--t1);font-size:14px;font-family:'IBM Plex Mono',monospace;outline:none}
-.login-card input:focus{border-color:var(--ag)}
-.login-card button{width:100%;padding:11px;background:transparent;border:1px solid var(--ag);color:var(--ag);font-family:'Share Tech Mono',monospace;font-size:14px;letter-spacing:.15em;cursor:pointer;border-radius:4px;transition:all .2s;margin-bottom:16px}
-.login-card button:hover{background:var(--ag);color:#080A0F}
-.login-card .htf{font-size:10px;color:var(--t2);opacity:.6}
-.login-err{color:var(--ar);font-size:12px;margin-bottom:8px;min-height:18px}
-/* MAIN APP */
-#main-ui{display:none;flex-direction:column;height:100vh}
-/* HEADER */
-header{display:flex;align-items:center;padding:0 16px;height:44px;background:var(--bg2);border-bottom:1px solid var(--bdr);gap:16px;flex-shrink:0}
-.h-logo{font-family:'Share Tech Mono',monospace;font-size:16px;color:var(--ag);letter-spacing:.3em}
-.h-sub{font-size:9px;color:var(--t2);text-transform:uppercase;letter-spacing:.15em;margin-left:-8px}
-.h-status{display:flex;align-items:center;gap:6px;margin-left:auto;font-size:11px;color:var(--t2)}
-.h-dot{width:7px;height:7px;border-radius:50%;background:var(--ag);animation:pulse 2s ease-in-out infinite}
-@keyframes pulse{0%,100%{box-shadow:0 0 0 0 var(--glow)}50%{box-shadow:0 0 0 6px transparent}}
-.h-sid{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--t2);margin-left:12px}
-.h-btn{background:none;border:1px solid var(--bdr);color:var(--t2);font-size:10px;padding:4px 10px;border-radius:3px;cursor:pointer;font-family:'IBM Plex Mono',monospace;transition:all .2s}
-.h-btn:hover{border-color:var(--ag);color:var(--ag)}
-/* BODY */
+#login-screen{align-items:center;justify-content:center}
+.login-glow{position:absolute;width:300px;height:300px;border-radius:50%;filter:blur(80px);opacity:.18;animation:pulseGlow 9s ease-in-out infinite}
+.login-glow.g1{left:8%;top:14%;background:var(--accent-green)}
+.login-glow.g2{right:12%;bottom:18%;background:var(--accent-cyan);animation-delay:2s}
+.login-glow.g3{left:45%;top:64%;background:#0c703f;animation-delay:4s}
+@keyframes pulseGlow{0%,100%{transform:scale(1)}50%{transform:scale(1.18)}}
+.login-card{width:420px;background:rgba(10,16,24,.85);backdrop-filter:blur(20px) saturate(180%);border:1px solid rgba(0,255,136,.15);border-left:3px solid var(--accent-green);padding:28px 30px 24px;box-shadow:0 0 60px rgba(0,255,136,.08),0 40px 80px rgba(0,0,0,.6)}
+.login-tag{font-family:'Share Tech Mono',monospace;color:var(--accent-amber);font-size:10px;letter-spacing:.3em;margin-bottom:8px}
+.login-logo{font-family:'Rajdhani',sans-serif;font-size:48px;font-weight:700;letter-spacing:.15em;line-height:1}
+.login-line{height:1px;background:var(--accent-green);width:0;animation:drawLine .8s ease forwards;margin:12px 0}
+@keyframes drawLine{to{width:100%}}
+.login-sub{font-size:11px;letter-spacing:.4em;color:var(--text-secondary);font-weight:300;margin-bottom:16px}
+.status-strip{display:flex;justify-content:space-between;gap:8px;padding:8px 0;border-top:1px solid var(--border-dim);border-bottom:1px solid var(--border-dim);font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--accent-green);margin-bottom:18px}
+.status-strip span{display:flex;align-items:center;gap:6px}
+.login-err{min-height:18px;color:var(--accent-red);font-size:12px;margin-bottom:6px;font-family:'Share Tech Mono',monospace}
+.fgroup{position:relative;margin-bottom:14px}
+.fgroup input{width:100%;padding:14px 0 8px;background:rgba(0,0,0,.4);border:0;border-bottom:1px solid rgba(0,255,136,.3);color:var(--text-primary);font-family:'Share Tech Mono',monospace;font-size:13px;outline:none}
+.fgroup input:focus{border-bottom-color:var(--accent-green);box-shadow:0 8px 10px -8px rgba(0,255,136,.35)}
+.fgroup label{position:absolute;left:0;top:15px;font-size:12px;letter-spacing:.12em;color:var(--text-secondary);pointer-events:none;transition:all .2s ease;font-family:'Share Tech Mono',monospace}
+.fgroup input:focus+label,.fgroup input:not(:placeholder-shown)+label{top:-2px;font-size:10px;color:var(--accent-green)}
+#login-btn{width:100%;height:48px;margin-top:6px}
+.login-foot{text-align:center;margin-top:14px;color:var(--text-secondary);font-size:11px}
+/* BRIEFING */
+#briefing-screen{padding:22px 56px 34px;flex-direction:column;background:linear-gradient(180deg,rgba(7,11,16,.45),rgba(7,11,16,.7));overflow-y:auto}
+#briefing-screen::after{content:'';position:absolute;inset:0;pointer-events:none;opacity:.08;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)' opacity='.4'/%3E%3C/svg%3E")}
+.brief-top{height:44px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border-dim);position:relative;z-index:2}
+.mini-logo{font-size:24px;letter-spacing:.12em;font-weight:700}
+.brief-center{font-family:'Share Tech Mono',monospace;font-size:11px;letter-spacing:.25em;color:var(--text-secondary)}
+.brief-right{display:flex;align-items:center;gap:14px;font-family:'Share Tech Mono',monospace;font-size:11px}
+.link-logout{color:var(--accent-red);cursor:pointer;text-decoration:none}
+.brief-content{position:relative;z-index:2;display:flex;flex-direction:column;min-height:calc(100vh - 110px);height:auto;padding-top:34px;padding-bottom:24px}
+.hero-line{font-weight:700;font-size:80px;line-height:.92;letter-spacing:.04em;opacity:0;transform:translateY(14px);animation:heroIn .6s ease forwards}
+.hero-line.secondary{font-weight:300;color:var(--text-secondary);animation-delay:.15s}
+.hero-line.accent{color:var(--accent-green);animation-delay:.3s}
+@keyframes heroIn{to{opacity:1;transform:translateY(0)}}
+.brief-divider{height:1px;background:var(--accent-green);width:0;animation:drawLine .8s ease .4s forwards;margin:18px 0 18px}
+.brief-sub{max-width:680px;font-size:18px;color:var(--text-secondary);line-height:1.45;opacity:0;animation:fadeUp .8s ease .5s forwards}
+@keyframes fadeUp{to{opacity:1;transform:translateY(0)}}
+.stats-row{margin-top:24px;display:grid;grid-template-columns:repeat(4,minmax(120px,1fr));max-width:760px;border:1px solid var(--border-dim)}
+.stat{padding:12px 14px;border-right:1px solid var(--border-dim)}
+.stat:last-child{border-right:0}
+.stat .n{font-size:48px;font-weight:700;color:var(--accent-green);line-height:1}
+.stat .l{font-family:'Share Tech Mono',monospace;font-size:10px;letter-spacing:.2em;color:var(--text-secondary);text-transform:uppercase}
+.pipeline{margin-top:20px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;max-width:1000px}
+.node{width:106px;min-height:54px;border:1px solid rgba(0,255,136,.35);display:flex;align-items:center;justify-content:center;text-align:center;font-family:'Share Tech Mono',monospace;font-size:10px;letter-spacing:.08em;opacity:.4;transform:translateY(8px);animation:nodeIn .35s ease forwards}
+.node:nth-child(1){animation-delay:.2s}.node:nth-child(3){animation-delay:.4s}.node:nth-child(5){animation-delay:.6s}.node:nth-child(7){animation-delay:.8s}.node:nth-child(9){animation-delay:1s}.node:nth-child(11){animation-delay:1.2s}.node:nth-child(13){animation-delay:1.4s}.node:nth-child(15){animation-delay:1.6s}
+.node.active{box-shadow:var(--glow-green);opacity:1}
+.flow{width:26px;height:1px;border-top:1px dashed rgba(0,255,136,.45);animation:flow 1.4s linear infinite}
+@keyframes flow{from{background-position:0 0}to{background-position:30px 0}}
+@keyframes nodeIn{to{opacity:1;transform:translateY(0)}}
+.feature-grid{margin-top:26px;display:grid;grid-template-columns:repeat(3,minmax(220px,1fr));gap:14px;max-width:1000px}
+.fcard{background:var(--bg-card);border-left:3px solid var(--accent-green);padding:14px;border:1px solid var(--border-dim);transition:all .2s ease;opacity:0;transform:translateY(12px);animation:fadeUp .5s ease forwards}
+.fcard:nth-child(1){animation-delay:.6s}.fcard:nth-child(2){animation-delay:.75s}.fcard:nth-child(3){animation-delay:.9s}
+.fcard:hover{background:var(--bg-card-hover);box-shadow:var(--glow-green)}
+.ficon{color:var(--accent-cyan);font-size:18px;margin-bottom:8px}
+.ftitle{font-size:20px;font-weight:600;letter-spacing:.05em;margin-bottom:6px}
+.ftext{color:var(--text-secondary);font-size:14px;line-height:1.35}
+.brief-cta{margin-top:auto;display:flex;justify-content:center}
+#to-terminal{height:56px;width:320px;font-size:16px}
+/* TERMINAL */
+#main-ui{flex-direction:column}
+.terminal-header{height:52px;padding:0 16px;background:rgba(7,11,16,.95);backdrop-filter:blur(10px);border-bottom:1px solid rgba(0,255,136,.15);display:flex;align-items:center;gap:16px}
+.h-logo{font-size:22px;letter-spacing:.12em;font-weight:700}
+.v-badge{font-family:'Share Tech Mono',monospace;font-size:10px;padding:2px 6px;border:1px solid var(--accent-green);color:var(--accent-green)}
+.h-crumb{margin-left:auto;margin-right:auto;font-family:'Share Tech Mono',monospace;font-size:11px;letter-spacing:.2em;color:var(--text-secondary)}
+.h-right{display:flex;align-items:center;gap:10px;font-family:'Share Tech Mono',monospace;font-size:10px}
+.h-btn{background:transparent;border:1px solid var(--border-dim);padding:4px 10px;color:var(--text-secondary);font-family:'Share Tech Mono',monospace;cursor:pointer}
+.h-btn:hover{border-color:var(--accent-green);color:var(--accent-green)}
 .body-wrap{display:flex;flex:1;overflow:hidden}
-/* LEFT PANEL */
-.left-panel{width:220px;background:var(--bg2);border-right:1px solid var(--bdr);display:flex;flex-direction:column;flex-shrink:0}
-.panel-title{font-size:10px;text-transform:uppercase;letter-spacing:.15em;color:var(--t2);padding:12px 14px 8px;display:flex;align-items:center;gap:6px}
-.panel-title .badge{background:var(--bg3);color:var(--ag);font-size:9px;padding:1px 6px;border-radius:8px;font-family:'IBM Plex Mono',monospace}
-.session-list{flex:1;overflow-y:auto;padding:4px 8px}
-.session-list::-webkit-scrollbar{width:3px}
-.session-list::-webkit-scrollbar-thumb{background:var(--bdr);border-radius:4px}
-.s-item{padding:10px;border-radius:4px;cursor:pointer;border-left:2px solid transparent;margin-bottom:4px;transition:all .2s}
-.s-item:hover{background:var(--bg3);border-left-color:var(--ag)}
-.s-item .sq{font-size:12px;color:var(--t1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:3px}
-.s-item .sm{font-size:10px;color:var(--t2);display:flex;gap:8px;align-items:center}
-.s-item .conf-bar{width:40px;height:3px;background:var(--bg1);border-radius:2px;overflow:hidden}
-.s-item .conf-bar .fill{height:100%;background:var(--ag);border-radius:2px}
-.clear-btn{margin:8px;padding:6px;background:none;border:1px solid var(--bdr);color:var(--t2);font-size:10px;text-transform:uppercase;letter-spacing:.1em;cursor:pointer;border-radius:3px;transition:all .2s}
-.clear-btn:hover{border-color:var(--ar);color:var(--ar)}
-/* CENTER */
-.center-panel{flex:1;display:flex;flex-direction:column;overflow:hidden;position:relative}
-.center-panel::after{content:'';position:absolute;inset:0;pointer-events:none;background:repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(255,255,255,0.008) 3px,rgba(255,255,255,0.008) 4px);z-index:0}
-.center-scroll{flex:1;overflow-y:auto;padding:20px;position:relative;z-index:1}
-.center-scroll::-webkit-scrollbar{width:4px}
-.center-scroll::-webkit-scrollbar-thumb{background:var(--bdr);border-radius:4px}
-/* EMPTY STATE */
-.empty-state{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;opacity:.5}
-.empty-state .e-logo{font-family:'Share Tech Mono',monospace;font-size:32px;color:var(--ag);letter-spacing:.3em;margin-bottom:12px}
-.empty-state p{font-size:12px;color:var(--t2);text-transform:uppercase;letter-spacing:.2em}
-/* STEP FEED */
-.step-line{font-family:'IBM Plex Mono',monospace;font-size:12px;padding:4px 0;animation:slideIn .25s ease;display:flex;gap:8px;line-height:1.6}
-@keyframes slideIn{from{opacity:0;transform:translateX(-10px)}to{opacity:1;transform:translateX(0)}}
-.step-line .sn{color:var(--ag);min-width:60px}
-.step-line .st{color:var(--t2);min-width:56px}
-.step-line .sa{color:var(--ap)}
-.step-line .sm{color:var(--t2);flex:1}
-.step-line.error .sa{color:var(--ar)}
-/* REPORT CARDS */
-.rpt{display:flex;flex-direction:column;gap:12px;margin-top:16px}
-.card{background:var(--bg2);border:1px solid var(--bdr);border-radius:6px;padding:16px;animation:cardIn .3s ease}
-@keyframes cardIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
-.card-title{font-size:10px;text-transform:uppercase;letter-spacing:.15em;color:var(--t2);margin-bottom:10px;display:flex;align-items:center;gap:6px}
-.card-title::before{content:'';width:3px;height:12px;background:var(--ag);border-radius:2px}
-.card.conflict{border-color:var(--ao)}
-.card.conflict .card-title::before{background:var(--ao)}
-.summary-text{font-size:14px;line-height:1.7;color:var(--t1)}
-.finding{display:flex;align-items:flex-start;gap:8px;padding:8px 0;border-bottom:1px solid rgba(33,38,45,.5);font-size:13px;line-height:1.6}
-.finding:last-child{border:none}
-.finding .fi{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--ag);min-width:20px;padding-top:3px}
-.finding .ft{flex:1;color:var(--t1)}
-.cbadge{font-size:9px;font-family:'IBM Plex Mono',monospace;padding:2px 6px;border-radius:3px;font-weight:600}
-.cbadge.HIGH{background:rgba(63,185,80,.15);color:var(--ag)}
-.cbadge.MED{background:rgba(240,136,62,.12);color:var(--ao)}
-.cbadge.LOW{background:rgba(255,123,114,.12);color:var(--ar)}
-.src-row{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid rgba(33,38,45,.5);font-size:12px}
-.src-row:last-child{border:none}
-.src-row .si{font-family:'IBM Plex Mono',monospace;color:var(--ag);min-width:20px}
-.src-row .st{flex:1;color:var(--t1);font-weight:500}
-.src-row a{color:var(--tm);font-family:'IBM Plex Mono',monospace;font-size:11px;text-decoration:none}
-.src-row a:hover{text-decoration:underline}
-.followup{padding:6px 12px;background:var(--bg3);border:1px solid var(--bdr);border-radius:4px;color:var(--ab);font-size:12px;cursor:pointer;transition:all .2s;text-align:left}
-.followup:hover{border-color:var(--ag);color:var(--ag)}
-.conf-lg{font-family:'Share Tech Mono',monospace;font-size:48px;color:var(--ag)}
-.conf-exp{font-size:13px;color:var(--t2);margin-top:8px;line-height:1.6}
-.refined-badge{font-size:9px;color:var(--ap);margin-left:6px}
-/* RIGHT PANEL */
-.right-panel{width:280px;background:var(--bg2);border-left:1px solid var(--bdr);display:flex;flex-direction:column;flex-shrink:0}
-.src-cards{flex:1;overflow-y:auto;padding:8px}
-.src-cards::-webkit-scrollbar{width:3px}
-.src-cards::-webkit-scrollbar-thumb{background:var(--bdr);border-radius:4px}
-.src-card{padding:10px;border-left:2px solid var(--bdr);margin-bottom:6px;border-radius:0 4px 4px 0;background:var(--bg3);transition:all .2s;animation:cardIn .3s ease}
-.src-card:hover{border-left-color:var(--ag);background:rgba(22,27,34,.8)}
-.src-card .domain{font-size:12px;font-weight:600;color:var(--t1);margin-bottom:3px}
-.src-card .meta{font-size:10px;color:var(--t2);font-family:'IBM Plex Mono',monospace;display:flex;gap:8px;margin-bottom:6px}
-.src-card .rel-bar{height:3px;background:var(--bg1);border-radius:2px;margin-bottom:6px}
-.src-card .rel-bar .fill{height:100%;background:var(--ag);border-radius:2px;transition:width .3s}
-.src-card .preview{font-size:11px;color:var(--t2);line-height:1.5;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
-/* INPUT BAR */
-.input-bar{padding:12px 16px;background:var(--bg2);border-top:1px solid var(--bdr);flex-shrink:0}
-.depth-row{display:flex;align-items:center;gap:8px;margin-bottom:8px}
-.d-btn{font-family:'IBM Plex Mono',monospace;font-size:10px;padding:4px 12px;border:1px solid var(--bdr);background:none;color:var(--t2);border-radius:3px;cursor:pointer;transition:all .2s;text-transform:uppercase;letter-spacing:.05em}
-.d-btn.active{border-color:var(--ag);color:var(--ag);background:var(--glow)}
-.d-btn:hover{border-color:var(--ag)}
-.est-info{font-size:10px;color:var(--t2);font-family:'IBM Plex Mono',monospace;margin-left:auto}
-.input-row{display:flex;gap:8px}
-#q-input{flex:1;background:var(--bg3);border:1px solid var(--bdr);padding:10px 14px;color:var(--t1);font-family:'IBM Plex Mono',monospace;font-size:13px;border-radius:4px;outline:none;transition:border .2s}
-#q-input:focus{border-color:var(--ag)}
-#q-input::placeholder{color:var(--t2)}
-#exec-btn{padding:10px 24px;background:none;border:1px solid var(--ag);color:var(--ag);font-family:'Share Tech Mono',monospace;font-size:13px;letter-spacing:.1em;cursor:pointer;border-radius:4px;transition:all .2s}
-#exec-btn:hover{background:var(--ag);color:#080A0F}
-#exec-btn:disabled{opacity:.3;cursor:not-allowed}
-/* RESPONSIVE */
-@media(max-width:1024px){.left-panel{display:none}.right-panel{display:none}}
+.left-panel{width:240px;background:rgba(7,11,16,.6);border-right:1px solid var(--border-dim);display:flex;flex-direction:column}
+.panel-title{font-family:'Share Tech Mono',monospace;font-size:10px;letter-spacing:.3em;color:var(--text-secondary);padding:12px 12px 8px;display:flex;justify-content:space-between;align-items:center}
+.badge{border:1px solid var(--border-dim);padding:2px 5px;color:var(--accent-green)}
+.session-list{padding:6px 8px;overflow:auto;flex:1}
+.s-item{margin-bottom:7px;border:1px solid var(--border-dim);background:rgba(15,25,35,.5);padding:8px 9px 8px 12px;position:relative;cursor:pointer}
+.s-item::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--accent-green)}
+.s-item.mid::before{background:var(--accent-amber)}.s-item.low::before{background:var(--accent-red)}
+.s-item:hover{background:var(--bg-card-hover);box-shadow:0 0 18px rgba(0,255,136,.12)}
+.sq{font-size:13px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;line-height:1.2;min-height:30px}
+.sm{margin-top:6px;font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--text-secondary);display:flex;justify-content:space-between}
+.clear-btn{margin:8px;border:1px solid var(--border-dim);background:transparent;color:var(--text-secondary);padding:8px;font-family:'Share Tech Mono',monospace;font-size:10px;letter-spacing:.18em;cursor:pointer}
+.clear-btn:hover{color:var(--accent-red);border-color:var(--accent-red)}
+.center-panel{flex:1;position:relative;background:var(--bg-void);overflow:hidden}
+.center-panel::before{content:'';position:absolute;inset:0;pointer-events:none;opacity:.03;background:repeating-linear-gradient(180deg,#fff 0,#fff 1px,transparent 1px,transparent 3px);z-index:1}
+.center-scroll{height:100%;overflow:auto;padding:18px;position:relative;z-index:2}
+.empty-state{height:100%;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:10px}
+.radar{position:relative;width:180px;height:180px;display:flex;align-items:center;justify-content:center}
+.radar .ring{position:absolute;border:1px solid rgba(0,255,136,.35);border-radius:50%;animation:ring 2s linear infinite}
+.radar .ring.r1{width:72px;height:72px}.radar .ring.r2{width:118px;height:118px;animation-delay:.6s}.radar .ring.r3{width:164px;height:164px;animation-delay:1.2s}
+@keyframes ring{0%{opacity:.8;transform:scale(.8)}100%{opacity:0;transform:scale(1.15)}}
+.e-logo{font-size:64px;opacity:.2;font-weight:700;letter-spacing:.14em}
+.await{font-family:'Share Tech Mono',monospace;color:var(--text-secondary);font-size:12px;letter-spacing:.2em}
+.await::after{content:'_';animation:blink .7s steps(1) infinite}
+.user-query{font-family:'Share Tech Mono',monospace;color:var(--accent-green);padding:8px 0;border-bottom:1px solid var(--border-dim);margin-bottom:8px}
+.step-line{display:flex;gap:8px;align-items:flex-start;font-family:'Share Tech Mono',monospace;font-size:12px;padding:7px 8px;border-left:2px solid var(--accent-cyan);margin-bottom:6px;background:rgba(15,25,35,.26);animation:stepIn .25s ease}
+@keyframes stepIn{from{opacity:0;transform:translateX(-14px)}to{opacity:1;transform:translateX(0)}}
+.sn{color:var(--accent-green)}.st{color:var(--text-secondary)}.sm-text{color:var(--text-primary);flex:1}
+.sb{font-size:10px;padding:2px 6px;border:1px solid currentColor}
+.sb.SEARCH{color:var(--accent-cyan)}.sb.SCRAPE{color:var(--accent-green)}.sb.ANALYZE{color:var(--accent-purple)}.sb.SYNTHESIZE{color:var(--accent-amber)}.sb.ERROR{color:var(--accent-red)}.sb.DONE{color:#3aff9f}
+.rpt{margin-top:10px;display:flex;flex-direction:column;gap:12px}
+.card{background:var(--bg-card);border:1px solid var(--border-dim);padding:14px}
+.card-title{font-size:11px;font-weight:600;letter-spacing:.2em;margin-bottom:8px;padding-left:10px;border-left:3px solid var(--accent-green)}
+.card.conflict{background:rgba(255,179,0,.08)}.card.conflict .card-title{border-left-color:var(--accent-amber)}
+.summary-text,.finding,.conf-exp{color:var(--text-primary);line-height:1.45}
+.finding{display:flex;gap:8px;padding:6px 0;border-bottom:1px solid var(--border-dim);font-size:13px}.finding:last-child{border-bottom:0}
+.fi{color:var(--accent-green);min-width:22px;font-family:'Share Tech Mono',monospace}
+.cbadge{font-family:'Share Tech Mono',monospace;font-size:10px;padding:1px 6px;border:1px solid}
+.cbadge.HIGH{color:var(--accent-green)}.cbadge.MED{color:var(--accent-amber)}.cbadge.LOW{color:var(--accent-red)}
+.sources-table{display:flex;flex-direction:column;gap:6px}
+.src-row{display:grid;grid-template-columns:120px 1fr 100px 140px;gap:10px;font-size:12px;padding:6px 0;border-bottom:1px solid var(--border-dim);align-items:center}
+.src-row a{font-family:'IBM Plex Mono',monospace;font-weight:300;color:var(--accent-cyan);text-decoration:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rel-track{height:4px;background:#0a1218}.rel-fill{height:100%;background:var(--accent-green)}
+.followup{padding:7px 10px;border:1px solid var(--border-dim);background:transparent;font-size:12px;cursor:pointer}
+.followup:hover{border-color:var(--accent-green);color:var(--accent-green)}
+.conf-wrap{display:flex;align-items:center;gap:16px}
+.conf-svg{width:120px;height:120px}
+.conf-num{font-size:40px;font-weight:700}
+.right-panel{width:260px;background:rgba(7,11,16,.6);border-left:1px solid var(--border-dim);display:flex;flex-direction:column}
+.src-cards{overflow:auto;flex:1;padding:8px}
+.src-card{border:1px solid var(--border-dim);background:var(--bg-card);padding:8px;margin-bottom:7px;animation:srcIn .28s ease}
+@keyframes srcIn{from{opacity:0;transform:translateX(14px)}to{opacity:1;transform:translateX(0)}}
+.domain{font-size:13px;font-weight:600}
+.meta{font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--text-secondary);margin:4px 0}
+.rel-bar{height:3px;background:var(--bg-panel);margin-bottom:6px}
+.rel-bar .fill{height:100%;background:var(--accent-green)}
+.preview{font-size:11px;color:var(--text-secondary);line-height:1.35;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.input-bar{height:72px;background:rgba(7,11,16,.95);border-top:1px solid rgba(0,255,136,.2);padding:10px 14px;display:flex;flex-direction:column;gap:8px}
+.depth-row{display:flex;gap:8px;align-items:center}
+.d-btn{border:1px solid var(--border-dim);background:transparent;color:var(--text-secondary);font-family:'Share Tech Mono',monospace;font-size:10px;padding:4px 10px;cursor:pointer}
+.d-btn.active{background:var(--accent-green);color:#000;border-color:var(--accent-green)}
+.est-info{margin-left:auto;font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--accent-amber)}
+.input-row{display:flex;gap:10px}
+#q-input{flex:1;background:rgba(0,0,0,.35);border:0;border-bottom:1px solid rgba(0,255,136,.35);color:var(--text-primary);font-family:'Share Tech Mono',monospace;font-size:13px;padding:8px 0;outline:none}
+#q-input:focus{border-bottom-color:var(--accent-green);box-shadow:0 8px 10px -8px rgba(0,255,136,.35)}
+#exec-btn{width:128px;height:36px}
+@media(max-width:1180px){.right-panel{display:none}.left-panel{width:210px}.hero-line{font-size:56px}}
+@media(max-width:900px){.left-panel{display:none}.hero-line{font-size:44px}.feature-grid{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
-<!-- LOGIN -->
-<div id="login-screen">
-<div class="login-bg"></div>
-<div class="login-card">
-<div class="logo-text">DEEPTRACE</div>
-<div class="logo-sub">AUTONOMOUS RESEARCH SYSTEM</div>
-<div class="clearance">⚠ CLEARANCE REQUIRED</div>
-<div class="login-err" id="login-error" style="display:none"></div>
-<input id="username" placeholder="USERNAME" autocomplete="off">
-<input id="password" type="password" placeholder="PASSWORD" onkeydown="if(event.key==='Enter')handleLogin()">
-<button onclick="handleLogin()">AUTHENTICATE</button>
-<div class="htf">Built for Hack To Future 3.0</div>
-</div>
-</div>
-<!-- MAIN APP -->
-<div id="main-ui">
-<header>
-<span class="h-logo">DEEPTRACE</span>
-<span class="h-sub">AUTONOMOUS RESEARCH SYSTEM v2.0</span>
-<div class="h-status"><div class="h-dot"></div>SYSTEM ONLINE</div>
-<span class="h-sid" id="h-sid"></span>
-<button class="h-btn" onclick="doExport()">EXPORT</button>
-<button class="h-btn" onclick="doLogout()">LOGOUT</button>
-</header>
-<div class="body-wrap">
-<!-- LEFT -->
-<div class="left-panel">
-<div class="panel-title">RESEARCH SESSIONS <span class="badge" id="sess-count">0</span></div>
-<div class="session-list" id="sess-list"></div>
-<button class="clear-btn" onclick="clearHistory()">CLEAR HISTORY</button>
-</div>
-<!-- CENTER -->
-<div class="center-panel">
-<div class="center-scroll" id="center">
-<div class="empty-state" id="empty"><div class="e-logo">DEEPTRACE</div><p>ENTER QUERY TO BEGIN DEEP RESEARCH</p></div>
-</div>
-</div>
-<!-- RIGHT -->
-<div class="right-panel">
-<div class="panel-title">SOURCE INTELLIGENCE <span class="badge" id="src-count">0</span></div>
-<div class="src-cards" id="src-panel"></div>
-</div>
-</div>
-<!-- INPUT -->
-<div class="input-bar">
-<div class="depth-row">
-<button class="d-btn" data-d="quick" onclick="setDepth(this)">QUICK</button>
-<button class="d-btn active" data-d="standard" onclick="setDepth(this)">STANDARD</button>
-<button class="d-btn" data-d="deep" onclick="setDepth(this)">DEEP</button>
-<span class="est-info" id="est-info">Est. ~90s | 5 sources</span>
-</div>
-<div class="input-row">
-<input id="q-input" placeholder="ENTER RESEARCH QUERY..." onkeydown="if(event.key==='Enter')exec()">
-<button id="exec-btn" onclick="exec()">EXECUTE</button>
-</div>
-</div>
-</div>
+<canvas id="bg-canvas"></canvas>
+<div class="bg-overlay"></div>
+<div class="scan-transition" id="scan-transition"></div>
+
+<section class="screen active" id="login-screen">
+  <div class="login-glow g1"></div><div class="login-glow g2"></div><div class="login-glow g3"></div>
+  <div class="login-card">
+    <div class="login-tag">HACK TO FUTURE 3.0 // AI-03</div>
+    <div class="login-logo">DEEPTRACE</div>
+    <div class="login-line"></div>
+    <div class="login-sub">AUTONOMOUS DEEP RESEARCH SYSTEM</div>
+    <div class="status-strip">
+      <span><i class="status-dot"></i>FIRECRAWL CONNECTED</span>
+      <span><i class="status-dot"></i>LLM ONLINE</span>
+      <span><i class="status-dot"></i>MEMORY ACTIVE</span>
+    </div>
+    <div class="login-err" id="login-error"></div>
+    <div class="fgroup"><input id="username" placeholder=" " autocomplete="off"><label>OPERATOR ID</label></div>
+    <div class="fgroup"><input id="password" type="password" placeholder=" " onkeydown="if(event.key==='Enter')handleLogin()"><label>ACCESS CODE</label></div>
+    <button id="login-btn" class="action-btn" onclick="handleLogin()">AUTHENTICATE</button>
+    <div class="login-foot">Built for Hack To Future 3.0 - Team DeepTrace</div>
+  </div>
+</section>
+
+<section class="screen" id="briefing-screen">
+  <div class="brief-top">
+    <div class="mini-logo">DEEPTRACE</div>
+    <div class="brief-center">MISSION BRIEFING // CLEARANCE GRANTED</div>
+    <div class="brief-right"><span id="brief-operator">OPERATOR: --</span><a class="link-logout" onclick="doLogout()">LOGOUT</a></div>
+  </div>
+  <div class="brief-content">
+    <div>
+      <div class="hero-line">INTELLIGENCE</div>
+      <div class="hero-line secondary">THAT THINKS</div>
+      <div class="hero-line accent">FOR ITSELF.</div>
+      <div class="brief-divider"></div>
+      <div class="brief-sub">DeepTrace autonomously browses the live web, decomposes your query, and synthesizes intelligence from multiple verified sources - with citations, confidence scoring, and conflict detection.</div>
+      <div class="stats-row">
+        <div class="stat"><div class="n" data-target="10" data-prefix="3-">0</div><div class="l">SOURCES PER QUERY</div></div>
+        <div class="stat"><div class="n" data-target="10">0</div><div class="l">STEPS PIPELINE</div></div>
+        <div class="stat"><div class="n" data-label="LIVE">0</div><div class="l">WEB DATA</div></div>
+        <div class="stat"><div class="n" data-target="90" data-prefix="<">0</div><div class="l">SECONDS RESULTS</div></div>
+      </div>
+      <div class="pipeline">
+        <div class="node active">QUERY</div><div class="flow"></div>
+        <div class="node active">DECOMPOSE</div><div class="flow"></div>
+        <div class="node active">SEARCH</div><div class="flow"></div>
+        <div class="node active">SCRAPE</div><div class="flow"></div>
+        <div class="node active">SCORE</div><div class="flow"></div>
+        <div class="node active">GAP ANALYSIS</div><div class="flow"></div>
+        <div class="node active">SYNTHESIZE</div><div class="flow"></div>
+        <div class="node active">REPORT</div>
+      </div>
+      <div class="feature-grid">
+        <div class="fcard"><div class="ficon">[01]</div><div class="ftitle">MULTI-STEP REASONING</div><div class="ftext">10-step autonomous pipeline with self-reflection and gap analysis.</div></div>
+        <div class="fcard"><div class="ficon">[02]</div><div class="ftitle">LIVE WEB INTELLIGENCE</div><div class="ftext">Firecrawl MCP scrapes real sources in real-time. No cached data. No hallucinations.</div></div>
+        <div class="fcard"><div class="ficon">[03]</div><div class="ftitle">CONFLICT DETECTION</div><div class="ftext">Cross-references all sources and flags contradictions with source attribution.</div></div>
+      </div>
+    </div>
+    <div class="brief-cta"><button id="to-terminal" class="action-btn" onclick="goToTerminal()">INITIATE RESEARCH SESSION -></button></div>
+  </div>
+</section>
+
+<section class="screen" id="main-ui">
+  <div class="terminal-header">
+    <span class="h-logo">DEEPTRACE</span><span class="v-badge">v2.0</span>
+    <span class="h-crumb">RESEARCH TERMINAL // SESSION ACTIVE</span>
+    <div class="h-right"><i class="status-dot"></i>LIVE<span id="h-sid"></span><button class="h-btn" onclick="doExport()">EXPORT</button><button class="h-btn" onclick="doLogout()">LOGOUT</button></div>
+  </div>
+  <div class="body-wrap">
+    <div class="left-panel">
+      <div class="panel-title">RESEARCH SESSIONS <span class="badge" id="sess-count">0</span></div>
+      <div class="session-list" id="sess-list"></div>
+      <button class="clear-btn" onclick="clearHistory()">CLEAR HISTORY</button>
+    </div>
+    <div class="center-panel">
+      <div class="center-scroll" id="center">
+        <div class="empty-state" id="empty">
+          <div class="radar"><div class="ring r1"></div><div class="ring r2"></div><div class="ring r3"></div><div class="e-logo">DEEPTRACE</div></div>
+          <div class="await">AWAITING RESEARCH DIRECTIVE</div>
+        </div>
+      </div>
+    </div>
+    <div class="right-panel">
+      <div class="panel-title">SOURCE INTELLIGENCE <span class="badge" id="src-count">0</span></div>
+      <div class="src-cards" id="src-panel"></div>
+    </div>
+  </div>
+  <div class="input-bar">
+    <div class="depth-row">
+      <button class="d-btn" data-d="quick" onclick="setDepth(this)">QUICK</button>
+      <button class="d-btn active" data-d="standard" onclick="setDepth(this)">STANDARD</button>
+      <button class="d-btn" data-d="deep" onclick="setDepth(this)">DEEP</button>
+      <span class="est-info" id="est-info">~90s // 5 SOURCES</span>
+    </div>
+    <div class="input-row">
+      <input id="q-input" placeholder="ENTER RESEARCH DIRECTIVE..." onkeydown="if(event.key==='Enter')exec()">
+      <button id="exec-btn" class="action-btn" onclick="exec()">EXECUTE</button>
+    </div>
+  </div>
+</section>
+
 <script>
-let depth='standard',sessionId='dt-'+crypto.randomUUID().slice(0,8),lastReport=null;
-const depthCfg={quick:{t:'~30s',s:3},standard:{t:'~90s',s:5},deep:{t:'~3min',s:10}};
-// Auth
-window.onload = function() {
-  if (localStorage.getItem('dt_auth') === 'true') {
-    document.getElementById('login-screen').style.display = 'none';
-    document.getElementById('main-ui').style.display = 'flex';
-  }
-  document.getElementById('h-sid').textContent='SID: '+sessionId;
-  loadSessions();
+let depth = 'standard';
+let sessionId = 'dt-' + crypto.randomUUID().slice(0, 8);
+let lastReport = null;
+const depthCfg = { quick: { t: '~30s', s: 3 }, standard: { t: '~90s', s: 5 }, deep: { t: '~3min', s: 10 } };
+
+const screens = {
+  login: document.getElementById('login-screen'),
+  briefing: document.getElementById('briefing-screen'),
+  main: document.getElementById('main-ui')
 };
-function handleLogin() {
+
+function esc(s){const d=document.createElement('div');d.textContent=s||'';return d.innerHTML}
+function getDomain(u){try{return new URL(u).hostname.replace('www.','')}catch(e){return u}}
+
+function showScreen(name){
+  Object.values(screens).forEach(s => s.classList.remove('active'));
+  screens[name].classList.add('active');
+}
+
+function transitionTo(name){
+  const wipe = document.getElementById('scan-transition');
+  wipe.classList.remove('active');
+  void wipe.offsetWidth;
+  wipe.classList.add('active');
+  setTimeout(() => showScreen(name), 360);
+}
+
+function animateBriefStats(){
+  document.querySelectorAll('.stat .n').forEach((el)=>{
+    const label = el.dataset.label;
+    if (label){ el.textContent = label; return; }
+    const target = Number(el.dataset.target || 0);
+    const prefix = el.dataset.prefix || '';
+    let n = 0;
+    const tick = setInterval(() => {
+      n += Math.max(1, Math.ceil(target / 18));
+      if (n >= target){ n = target; clearInterval(tick); }
+      el.textContent = prefix + n;
+    }, 35);
+  });
+}
+
+window.onload = function(){
+  document.getElementById('h-sid').textContent = 'SID: ' + sessionId;
+  loadSessions();
+  startCanvas();
+  const op = localStorage.getItem('dt_operator') || 'ADMIN';
+  document.getElementById('brief-operator').textContent = 'OPERATOR: ' + op.toUpperCase();
+  if (localStorage.getItem('dt_auth') === 'true') {
+    showScreen('briefing');
+    animateBriefStats();
+  } else {
+    showScreen('login');
+  }
+};
+
+function handleLogin(){
   const username = document.getElementById('username').value.trim();
   const password = document.getElementById('password').value.trim();
   if (username === 'admin' && password === 'deeptrace') {
-    localStorage.setItem('dt_auth', 'true');
-    document.getElementById('login-screen').style.display = 'none';
-    document.getElementById('main-ui').style.display = 'flex';
-  } else {
-    document.getElementById('login-error').textContent = 'Invalid credentials. Use admin / deeptrace';
-    document.getElementById('login-error').style.display = 'block';
+    localStorage.setItem('dt_auth','true');
+    localStorage.setItem('dt_operator', username);
+    document.getElementById('brief-operator').textContent = 'OPERATOR: ' + username.toUpperCase();
+    transitionTo('briefing');
+    setTimeout(animateBriefStats, 450);
+    return;
   }
+  const err = document.getElementById('login-error');
+  err.textContent = 'Invalid credentials. Use admin / deeptrace';
 }
-function doLogout(){localStorage.removeItem('dt_auth');location.reload()}
-function setDepth(el){document.querySelectorAll('.d-btn').forEach(b=>b.classList.remove('active'));el.classList.add('active');depth=el.dataset.d;const c=depthCfg[depth];document.getElementById('est-info').textContent='Est. '+c.t+' | '+c.s+' sources'}
-function esc(s){const d=document.createElement('div');d.textContent=s||'';return d.innerHTML}
-function getDomain(u){try{return new URL(u).hostname.replace('www.','')}catch(e){return u}}
-// Sessions
+
+function goToTerminal(){transitionTo('main')}
+function doLogout(){localStorage.removeItem('dt_auth');localStorage.removeItem('dt_operator');location.reload()}
+function doExport(){if(lastReport&&lastReport.session_id)window.open('/research/export?session_id='+lastReport.session_id+'&format=markdown')}
+
+function setDepth(el){
+  document.querySelectorAll('.d-btn').forEach(b=>b.classList.remove('active'));
+  el.classList.add('active');
+  depth=el.dataset.d;
+  const c=depthCfg[depth];
+  document.getElementById('est-info').textContent=c.t+' // '+c.s+' SOURCES';
+}
+
 async function loadSessions(){
-try{const r=await fetch('/sessions');const d=await r.json();const list=document.getElementById('sess-list');list.innerHTML='';
-document.getElementById('sess-count').textContent=d.sessions.length;
-d.sessions.forEach(s=>{const el=document.createElement('div');el.className='s-item';
-el.innerHTML='<div class="sq">'+esc(s.query.slice(0,40))+'</div><div class="sm"><span>'+esc((s.timestamp||'').slice(11,19))+'</span><span>'+s.sources_scraped+'src</span><div class="conf-bar"><div class="fill" style="width:'+(s.confidence_score*100)+'%"></div></div></div>';
-el.onclick=()=>loadSession(s.session_id);list.appendChild(el)})}catch(e){}}
+  try{
+    const r=await fetch('/sessions');
+    const d=await r.json();
+    const list=document.getElementById('sess-list');
+    list.innerHTML='';
+    document.getElementById('sess-count').textContent=d.sessions.length;
+    d.sessions.forEach(s=>{
+      const el=document.createElement('div');
+      const cs=(s.confidence_score||0);
+      el.className='s-item '+(cs<0.6?'low':(cs<0.8?'mid':''));
+      el.innerHTML='<div class="sq">'+esc((s.query||'').slice(0,90))+'</div><div class="sm"><span>'+esc((s.timestamp||'').slice(11,19))+'</span><span>'+(s.sources_scraped||0)+' src</span></div>';
+      el.onclick=()=>loadSession(s.session_id);
+      list.appendChild(el);
+    });
+  }catch(e){}
+}
 async function loadSession(sid){try{const r=await fetch('/session/'+sid);const d=await r.json();if(d.history&&d.history.length){renderFullReport(d.history[d.history.length-1])}}catch(e){}}
 async function clearHistory(){await fetch('/sessions/all',{method:'DELETE'});loadSessions()}
-function doExport(){if(lastReport&&lastReport.session_id)window.open('/research/export?session_id='+lastReport.session_id+'&format=markdown')}
-// Research
+
 function exec(){
-const inp=document.getElementById('q-input'),q=inp.value.trim();if(!q)return;
-inp.value='';inp.disabled=true;document.getElementById('exec-btn').disabled=true;
-const center=document.getElementById('center');center.innerHTML='';
-document.getElementById('src-panel').innerHTML='';document.getElementById('src-count').textContent='0';
-let srcTotal=0;
-const es=new EventSource('/research/stream?query='+encodeURIComponent(q)+'&max_sources='+depthCfg[depth].s+'&depth='+depth);
-es.onmessage=e=>{
-const d=JSON.parse(e.data);
-if(d.status==='done'){es.close();lastReport=d.report;renderFullReport(d.report);inp.disabled=false;document.getElementById('exec-btn').disabled=false;loadSessions();return}
-if(d.status==='error'){es.close();addStep(d,'error');inp.disabled=false;document.getElementById('exec-btn').disabled=false;return}
-addStep(d);
-if(d.sources){d.sources.forEach(s=>{srcTotal++;addSourceCard(s)});document.getElementById('src-count').textContent=srcTotal}
-if(d.scored_sources){d.scored_sources.forEach(s=>{updateSourceScore(s)})}
-center.scrollTop=center.scrollHeight;
-};
-es.onerror=()=>{es.close();addStep({step:'?',timestamp:'',status:'error',message:'Connection lost'},'error');inp.disabled=false;document.getElementById('exec-btn').disabled=false};
-addUserMsg(q);
+  const inp=document.getElementById('q-input'),q=inp.value.trim();if(!q)return;
+  inp.value='';inp.disabled=true;document.getElementById('exec-btn').disabled=true;
+  const center=document.getElementById('center');center.innerHTML='';
+  document.getElementById('src-panel').innerHTML='';document.getElementById('src-count').textContent='0';
+  let srcTotal=0;
+  const es=new EventSource('/research/stream?query='+encodeURIComponent(q)+'&max_sources='+depthCfg[depth].s+'&depth='+depth);
+  es.onmessage=e=>{
+    const d=JSON.parse(e.data);
+    if(d.status==='done'){es.close();lastReport=d.report;renderFullReport(d.report);inp.disabled=false;document.getElementById('exec-btn').disabled=false;loadSessions();return}
+    if(d.status==='error'){es.close();addStep(d,'error');inp.disabled=false;document.getElementById('exec-btn').disabled=false;return}
+    addStep(d);
+    if(d.sources){d.sources.forEach(s=>{srcTotal++;addSourceCard(s)});document.getElementById('src-count').textContent=srcTotal}
+    if(d.scored_sources){d.scored_sources.forEach(s=>{updateSourceScore(s)})}
+    center.scrollTop=center.scrollHeight;
+  };
+  es.onerror=()=>{es.close();addStep({step:'?',timestamp:'',status:'error',message:'Connection lost'},'error');inp.disabled=false;document.getElementById('exec-btn').disabled=false};
+  addUserMsg(q);
 }
-function addUserMsg(q){const d=document.createElement('div');d.style.cssText='font-size:13px;color:var(--ag);font-family:"IBM Plex Mono",monospace;padding:8px 0;border-bottom:1px solid var(--bdr);margin-bottom:8px';d.textContent='> '+q;document.getElementById('center').appendChild(d)}
-function addStep(d,cls){const el=document.createElement('div');el.className='step-line '+(cls||'');
-el.innerHTML='<span class="sn">[STEP '+String(d.step||0).padStart(2,'0')+']</span><span class="st">['+(d.timestamp||'')+']</span><span class="sa">'+esc(d.status||'').toUpperCase()+'</span><span class="sm">'+esc(d.message||'')+'</span>';
-document.getElementById('center').appendChild(el)}
-function addSourceCard(s){const el=document.createElement('div');el.className='src-card';el.dataset.url=s.url;
-el.innerHTML='<div class="domain">'+esc(getDomain(s.url))+'</div><div class="meta"><span>'+(s.scrape_timestamp||'').slice(11,19)+'</span><span>'+s.word_count+'w</span></div><div class="rel-bar"><div class="fill" style="width:50%"></div></div><div class="preview">'+esc((s.preview||'').slice(0,200))+'</div>';
-document.getElementById('src-panel').appendChild(el)}
+
+function addUserMsg(q){
+  const d=document.createElement('div');
+  d.className='user-query';
+  d.textContent='> '+q;
+  document.getElementById('center').appendChild(d);
+}
+
+function addStep(d,cls){
+  const status=(d.status||'').toUpperCase();
+  const map={SEARCH:'SEARCH',SCRAPE:'SCRAPE',ANALYZE:'ANALYZE',SYNTHESIZE:'SYNTHESIZE',DONE:'DONE',ERROR:'ERROR'};
+  const badge=map[status]||'ANALYZE';
+  const el=document.createElement('div');
+  el.className='step-line '+(cls||'');
+  el.style.borderLeftColor = badge==='ERROR' ? 'var(--accent-red)' : badge==='SYNTHESIZE' ? 'var(--accent-amber)' : badge==='ANALYZE' ? 'var(--accent-purple)' : badge==='SEARCH' ? 'var(--accent-cyan)' : 'var(--accent-green)';
+  el.innerHTML='<span class="sn">[STEP '+String(d.step||0).padStart(2,'0')+']</span><span class="st">['+esc(d.timestamp||'--:--:--')+']</span><span class="sb '+badge+'">'+badge+'</span><span class="sm-text">'+esc(d.message||'')+'</span>';
+  document.getElementById('center').appendChild(el);
+}
+
+function addSourceCard(s){
+  const el=document.createElement('div');
+  el.className='src-card';
+  el.dataset.url=s.url;
+  el.innerHTML='<div class="domain">'+esc(getDomain(s.url||''))+'</div><div class="meta"><span>'+esc((s.scrape_timestamp||'').slice(11,19))+'</span> <span>'+(s.word_count||0)+'w</span></div><div class="rel-bar"><div class="fill" style="width:50%"></div></div><div class="preview">'+esc((s.preview||'').slice(0,220))+'</div>';
+  document.getElementById('src-panel').appendChild(el);
+}
 function updateSourceScore(s){document.querySelectorAll('.src-card').forEach(el=>{if(el.dataset.url===s.url){const bar=el.querySelector('.rel-bar .fill');if(bar)bar.style.width=(s.relevance_score*100)+'%'}})}
+
+function confidenceColor(score){
+  if(score>=80)return 'var(--accent-green)';
+  if(score>=60)return 'var(--accent-amber)';
+  return 'var(--accent-red)';
+}
+
 function renderFullReport(r){
-const center=document.getElementById('center');
-let html='<div class="rpt">';
-html+='<div class="card"><div class="card-title">QUERY</div><div style="font-family:IBM Plex Mono,monospace;color:var(--tm);font-size:13px">'+esc(r.query)+'</div></div>';
-html+='<div class="card"><div class="card-title">EXECUTIVE SUMMARY</div><div class="summary-text">'+esc(r.summary)+'</div></div>';
-// Key findings
-html+='<div class="card"><div class="card-title">KEY FINDINGS</div>';
-(r.key_findings||[]).forEach((f,i)=>{
-let badge='MED',fc=r.finding_confidences&&r.finding_confidences[i];
-if(fc)badge=fc.confidence||'MED';
-html+='<div class="finding"><span class="fi">'+(i+1)+'</span><span class="ft">'+esc(f)+'</span><span class="cbadge '+badge+'">'+badge+'</span></div>';
-});
-html+='</div>';
-// Refined findings
-if(r.refined_findings&&r.refined_findings.length){html+='<div class="card"><div class="card-title">🔄 REFINED FINDINGS</div>';
-r.refined_findings.forEach((f,i)=>{var text=typeof f==='string'?f:(f.finding||f.text||f.content||JSON.stringify(f));html+='<div class="finding"><span class="fi">R'+(i+1)+'</span><span class="ft">'+esc(text)+'<span class="refined-badge">🔄 REFINED</span></span></div>'});
-html+='</div>'}
-// Sources
-html+='<div class="card" id="sources-card"><div class="card-title">SOURCES</div>';
-var srcs=r.citations||r.sources||r.urls||[];
-if(!srcs||srcs.length===0){html+='<p style="color:var(--t2)">No sources available</p>'}
-else{srcs.forEach((c,i)=>{
-var url=c.url||c.link||c||'';
-var title=c.title||c.name||(url?getDomain(url):'Source '+(i+1));
-var rel=c.relevance_score||c.score||0.8;
-var domain=url?getDomain(url):'unknown';
-html+='<div class="src-row"><span class="si"><img src="https://www.google.com/s2/favicons?domain='+esc(domain)+'&sz=16" onerror="this.style.display=\'none\'" style="width:14px;height:14px;vertical-align:middle;margin-right:4px">['+(c.index||(i+1))+']</span><span class="st">'+esc(title)+'</span><a href="'+esc(url)+'" target="_blank">'+esc(domain)+'</a><span style="color:var(--ag);font-family:IBM Plex Mono,monospace;font-size:11px;min-width:36px;text-align:right">'+Math.round(rel*100)+'%</span></div>'})}
-html+='</div>';
-// Conflicts
-if(r.conflicts&&r.conflicts.length&&r.conflicts[0]){html+='<div class="card conflict"><div class="card-title">⚠ CONFLICTS</div>';
-r.conflicts.forEach(c=>{html+='<div style="font-size:13px;color:var(--ao);padding:4px 0">'+esc(c)+'</div>'});
-html+='</div>'}
-// Follow-ups
-if(r.suggested_followups&&r.suggested_followups.length){html+='<div class="card"><div class="card-title">FOLLOW-UP QUERIES</div><div style="display:flex;flex-direction:column;gap:6px">';
-r.suggested_followups.forEach(f=>{html+='<div class="followup" onclick="useFollowup(this)">'+esc(f)+'</div>'});
-html+='</div></div>'}
-// Confidence
-var cscore=(r.confidence_score||0)>1?Math.round(r.confidence_score):Math.round((r.confidence_score||0)*100);
-html+='<div class="card"><div class="card-title">CONFIDENCE ASSESSMENT</div><div class="conf-lg">'+cscore+'%</div><div class="conf-exp">'+esc(r.confidence_explanation||'')+'</div></div>';
-html+='</div>';
-// Keep existing step lines, append report
-const existing=center.innerHTML;
-center.innerHTML=existing+html;
-center.scrollTop=center.scrollHeight;
+  const center=document.getElementById('center');
+  let html='<div class="rpt">';
+  html+='<div class="card"><div class="card-title">QUERY</div><div style="font-family:Share Tech Mono,monospace;color:var(--accent-cyan)">'+esc(r.query||'')+'</div></div>';
+  html+='<div class="card"><div class="card-title">EXECUTIVE SUMMARY</div><div class="summary-text">'+esc(r.summary||'')+'</div></div>';
+  html+='<div class="card"><div class="card-title">KEY FINDINGS</div>';
+  (r.key_findings||[]).forEach((f,i)=>{let badge='MED';const fc=r.finding_confidences&&r.finding_confidences[i];if(fc)badge=fc.confidence||'MED';html+='<div class="finding"><span class="fi">'+(i+1)+'</span><span class="ft">'+esc(f)+'</span><span class="cbadge '+badge+'">'+badge+'</span></div>'});
+  html+='</div>';
+  if(r.refined_findings&&r.refined_findings.length){html+='<div class="card"><div class="card-title">REFINED FINDINGS</div>';r.refined_findings.forEach((f,i)=>{const text=typeof f==='string'?f:(f.finding||f.text||f.content||JSON.stringify(f));html+='<div class="finding"><span class="fi">R'+(i+1)+'</span><span class="ft">'+esc(text)+'</span></div>'});html+='</div>'}
+  html+='<div class="card"><div class="card-title">SOURCES</div><div class="sources-table">';
+  const srcs=r.citations||r.sources||r.urls||[];
+  if(!srcs||srcs.length===0){html+='<div class="summary-text" style="color:var(--text-secondary)">No sources available.</div>'}
+  else{srcs.forEach((c,i)=>{const url=c.url||c.link||c||'';const title=c.title||c.name||(url?getDomain(url):'Source '+(i+1));const rel=Math.round((c.relevance_score||c.score||0.8)*100);const domain=url?getDomain(url):'unknown';html+='<div class="src-row"><span>'+esc(domain)+'</span><span>'+esc(title)+'</span><span><div class="rel-track"><div class="rel-fill" style="width:'+rel+'%"></div></div></span><a href="'+esc(url)+'" target="_blank">'+esc(url)+'</a></div>'})}
+  html+='</div></div>';
+  if(r.conflicts&&r.conflicts.length&&r.conflicts[0]){html+='<div class="card conflict"><div class="card-title">CONFLICTS</div>';r.conflicts.forEach(c=>{html+='<div class="finding"><span class="fi">!</span><span class="ft">'+esc(c)+'</span></div>'});html+='</div>'}
+  if(r.suggested_followups&&r.suggested_followups.length){html+='<div class="card"><div class="card-title">FOLLOW-UP QUERIES</div><div style="display:flex;flex-direction:column;gap:6px">';r.suggested_followups.forEach(f=>{html+='<div class="followup" onclick="useFollowup(this)">'+esc(f)+'</div>'});html+='</div></div>'}
+  const cscore=(r.confidence_score||0)>1?Math.round(r.confidence_score):Math.round((r.confidence_score||0)*100);
+  const col=confidenceColor(cscore);
+  const circ=2*Math.PI*46;
+  const arc=Math.max(0,circ-(circ*cscore/100));
+  html+='<div class="card"><div class="card-title">CONFIDENCE ASSESSMENT</div><div class="conf-wrap"><svg class="conf-svg" viewBox="0 0 120 120"><circle cx="60" cy="60" r="46" stroke="rgba(255,255,255,.08)" stroke-width="8" fill="none"></circle><circle cx="60" cy="60" r="46" stroke="'+col+'" stroke-width="8" fill="none" stroke-dasharray="'+circ+'" stroke-dashoffset="'+arc+'" transform="rotate(-90 60 60)"></circle></svg><div><div class="conf-num" style="color:'+col+'">'+cscore+'%</div><div class="conf-exp">'+esc(r.confidence_explanation||'')+'</div></div></div></div>';
+  html+='</div>';
+  center.innerHTML=center.innerHTML+html;
+  center.scrollTop=center.scrollHeight;
 }
 function useFollowup(el){document.getElementById('q-input').value=el.textContent;exec()}
+
+function startCanvas(){
+  const canvas=document.getElementById('bg-canvas');
+  const ctx=canvas.getContext('2d');
+  let w=0,h=0,t=0;
+  const particles=Array.from({length:40},()=>({x:Math.random(),y:Math.random(),s:Math.random()*1.6+0.4,v:Math.random()*0.0007+0.0002,c:Math.random()>.5?'rgba(0,255,136,0.45)':'rgba(0,212,255,0.35)'}));
+  function resize(){w=canvas.width=window.innerWidth;h=canvas.height=window.innerHeight}
+  window.addEventListener('resize',resize);resize();
+  function frame(){
+    t+=0.012;
+    ctx.clearRect(0,0,w,h);
+    const cx=w/2,cy=h/2;
+    ctx.lineWidth=1;
+    ctx.strokeStyle='rgba(0,255,136,0.08)';
+    for(let i=0;i<32;i++){
+      const p=(i/32);
+      const y=cy+Math.pow(p,2)*h*1.2+((t*120)%40);
+      ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(w,y);ctx.stroke();
+    }
+    for(let i=-16;i<=16;i++){
+      const x = cx + i * 60;
+      ctx.beginPath();ctx.moveTo(x,h);ctx.lineTo(cx,cy);ctx.stroke();
+    }
+    particles.forEach(p=>{
+      p.y-=p.v;if(p.y<0)p.y=1;
+      const x=p.x*w,y=p.y*h;
+      ctx.fillStyle=p.c;
+      ctx.beginPath();ctx.arc(x,y,p.s,0,Math.PI*2);ctx.fill();
+    });
+    requestAnimationFrame(frame);
+  }
+  frame();
+}
 </script>
 </body>
 </html>

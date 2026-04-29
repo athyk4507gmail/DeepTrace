@@ -8,6 +8,10 @@ from models import ScrapedSource
 FIRECRAWL_API_KEY = os.getenv("FIRECRAWL_API_KEY")
 FIRECRAWL_BASE_URL = "https://api.firecrawl.dev/v1"
 
+
+class FirecrawlSearchError(RuntimeError):
+    """Raised when Firecrawl search fails with a user-actionable message."""
+
 async def scrape_url(url: str, timeout: int = 30) -> Optional[ScrapedSource]:
     """Scrape a single URL using Firecrawl API"""
     headers = {
@@ -61,6 +65,9 @@ async def search_and_scrape(
             "onlyMainContent": True
         }
     }
+    if not FIRECRAWL_API_KEY:
+        raise FirecrawlSearchError("Firecrawl API key missing. Set FIRECRAWL_API_KEY in .env.")
+
     try:
         async with httpx.AsyncClient(timeout=120) as client:
             response = await client.post(
@@ -89,9 +96,19 @@ async def search_and_scrape(
                 ))
         return sources[:num_sources]
 
+    except httpx.HTTPStatusError as e:
+        status = e.response.status_code if e.response else None
+        if status == 402:
+            raise FirecrawlSearchError(
+                "Firecrawl quota/billing limit reached (HTTP 402). Please upgrade/recharge Firecrawl and retry."
+            ) from e
+        if status == 401:
+            raise FirecrawlSearchError(
+                "Firecrawl authentication failed (HTTP 401). Check FIRECRAWL_API_KEY."
+            ) from e
+        raise FirecrawlSearchError(f"Firecrawl search failed with HTTP {status}.") from e
     except Exception as e:
-        print(f"Firecrawl search error: {e}")
-        return []
+        raise FirecrawlSearchError(f"Firecrawl search failed: {e}") from e
 
 async def scrape_multiple_urls(
     urls: List[str],
