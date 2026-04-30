@@ -26,3 +26,4 @@ server = "server.app:main"
 
 [tool.setuptools]
 include-package-data = true
+packages = ["server", "api", "mcp", "memory", "research", "baseline"]
