@@ -1250,11 +1250,11 @@ async def verify_identity(payload: Dict[str, Any]):
 
 @app.get("/fact-wars")
 async def serve_fact_wars():
-    try:
-        with open("static/fact_wars.html", encoding="utf-8") as f:
-            return HTMLResponse(f.read())
-    except FileNotFoundError:
-        raise HTTPException(status_code=500, detail="fact_wars.html missing")
+    import os
+    if not os.path.exists("static/fact_wars.html"):
+        raise HTTPException(status_code=404, detail="fact_wars.html missing")
+    with open("static/fact_wars.html", encoding="utf-8") as f:
+        return HTMLResponse(f.read())
 
 
 @app.post("/factwars/judge")
