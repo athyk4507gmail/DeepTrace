@@ -275,38 +275,7 @@ async def _enrich_sources_with_resurrection_and_freshness(query: str, sources: L
         )
     return enriched
 
-@app.get("/", response_class=HTMLResponse)
-async def root():
-    try:
-        with open("server/chat_ui.html", encoding='utf-8') as f:
-            return f.read()
-    except Exception as e:
-        return f"<html><body><h1>Error loading landing page</h1><p>Error: {str(e)}</p></body></html>"
 
-@app.get("/login", response_class=HTMLResponse)
-@app.get("/dark_ops_login.html", response_class=HTMLResponse)
-async def login_page():
-    try:
-        with open("server/dark_ops_login.html", encoding='utf-8') as f:
-            return f.read()
-    except Exception as e:
-        return f"<html><body><h1>Error loading login page</h1><p>Error: {str(e)}</p></body></html>"
-
-@app.get("/chat_ui", response_class=HTMLResponse)
-async def chat_page():
-    try:
-        with open("server/chat_ui.html", encoding='utf-8') as f:
-            return f.read()
-    except Exception as e:
-        return f"<html><body><h1>Error loading chat page</h1><p>Error: {str(e)}</p></body></html>"
-
-@app.get("/chat_ui.html", response_class=HTMLResponse)
-async def chat_page_html():
-    try:
-        with open("server/chat_ui.html", encoding='utf-8') as f:
-            return f.read()
-    except Exception as e:
-        return f"<html><body><h1>Error loading chat page</h1><p>Error: {str(e)}</p></body></html>"
 
 @app.get("/health")
 async def health():
@@ -1248,13 +1217,7 @@ async def verify_identity(payload: Dict[str, Any]):
     return {"ok": True, "request": row}
 
 
-@app.get("/fact-wars")
-async def serve_fact_wars():
-    import os
-    if not os.path.exists("static/fact_wars.html"):
-        raise HTTPException(status_code=404, detail="fact_wars.html missing")
-    with open("static/fact_wars.html", encoding="utf-8") as f:
-        return HTMLResponse(f.read())
+
 
 
 @app.post("/factwars/judge")
@@ -1285,3 +1248,9 @@ Write ONE sentence explaining why the winner had stronger evidence. Be specific.
         reason = f"The {winner} side presented stronger evidence with higher source confidence."
 
     return {"winner": winner, "for_score": for_score, "against_score": against_score, "reason": reason}
+
+import os
+from fastapi.staticfiles import StaticFiles
+
+if os.path.isdir("public"):
+    app.mount("/", StaticFiles(directory="public", html=True), name="public")
