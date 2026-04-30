@@ -20,6 +20,7 @@ except ImportError:
 
 # In-memory fallback when Supabase is not configured
 _memory_store = {}
+_feature_store = {}
 
 async def save_report(report: ResearchReport) -> str:
     """Save a research report to memory or Supabase"""
@@ -155,3 +156,62 @@ async def clear_all_sessions():
         except Exception as e:
             print(f"Supabase clear all error: {e}")
     _memory_store.clear()
+
+
+async def upsert_feature_item(table: str, item: dict) -> dict:
+    """Persist arbitrary feature data to Supabase table with memory fallback."""
+    if SUPABASE_ENABLED:
+        try:
+            supabase.table(table).upsert(item).execute()
+            return item
+        except Exception as e:
+            print(f"Supabase upsert error ({table}): {e}")
+    _feature_store.setdefault(table, {})
+    key = item.get("id") or item.get("hash") or item.get("session_id") or str(uuid.uuid4())
+    row = dict(item)
+    row["id"] = key
+    _feature_store[table][key] = row
+    return row
+
+
+async def insert_feature_item(table: str, item: dict) -> dict:
+    """Insert arbitrary feature data to Supabase table with memory fallback."""
+    if SUPABASE_ENABLED:
+        try:
+            supabase.table(table).insert(item).execute()
+            return item
+        except Exception as e:
+            print(f"Supabase insert error ({table}): {e}")
+    _feature_store.setdefault(table, {})
+    key = item.get("id") or item.get("hash") or str(uuid.uuid4())
+    row = dict(item)
+    row["id"] = key
+    _feature_store[table][key] = row
+    return row
+
+
+async def list_feature_items(table: str, limit: int = 100) -> list:
+    """List feature rows from Supabase or memory fallback."""
+    if SUPABASE_ENABLED:
+        try:
+            result = supabase.table(table).select("*").limit(limit).execute()
+            return result.data or []
+        except Exception as e:
+            print(f"Supabase list error ({table}): {e}")
+    rows = list((_feature_store.get(table) or {}).values())
+    return rows[:limit]
+
+
+async def get_feature_item(table: str, key_name: str, key_value: str):
+    """Get a single feature row by key from Supabase or memory fallback."""
+    if SUPABASE_ENABLED:
+        try:
+            result = supabase.table(table).select("*").eq(key_name, key_value).limit(1).execute()
+            return (result.data or [None])[0]
+        except Exception as e:
+            print(f"Supabase get error ({table}): {e}")
+    rows = _feature_store.get(table) or {}
+    for row in rows.values():
+        if row.get(key_name) == key_value:
+            return row
+    return None

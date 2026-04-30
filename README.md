@@ -75,7 +75,31 @@ uvicorn server.app:app --host 0.0.0.0 --port 8000 --reload
 
 Open → http://127.0.0.1:8000
 
-### 3. Use the Client
+### 3. Authentication
+
+DeepTrace features a secure authentication gate that protects the research interface:
+
+**Authentication Flow:**
+1. **Landing Page** (`/`) - Shows "SIGN IN" button for unauthenticated users
+2. **Login Page** (`/dark_ops_login.html`) - Secure 3D neural grid login interface
+3. **Session Management** - Uses localStorage for persistent sessions
+4. **Authenticated Access** - After login, users see "LAUNCH AGENT" button to access the research interface
+
+**Features:**
+- **Secure Login Page**: Dark Ops Neural Grid with 3D visualization
+- **Session Persistence**: User sessions stored in localStorage
+- **Logout Functionality**: Users can sign out from the interface
+- **Email-based Auth**: Simple email-based authentication system
+- **Responsive Design**: Works across all devices
+
+**To Test Authentication:**
+1. Visit http://localhost:8000
+2. Click "SIGN IN" to access the login page
+3. Enter your email and password (demo credentials)
+4. After login, click "LAUNCH AGENT" to access the research interface
+5. Use the "LOGOUT" button in the navigation to sign out
+
+### 4. Use the Client
 
 ```python
 from client import DeepTraceClient
