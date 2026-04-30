@@ -1,3 +1,17 @@
 {
-  "rewrites": [{ "source": "/(.*)", "destination": "/" }]
+  "builds": [
+    {
+      "src": "server/app.py",
+      "use": "@vercel/python",
+      "config": {
+        "includeFiles": "static/**"
+      }
+    }
+  ],
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/server/app.py"
+    }
+  ]
 }
